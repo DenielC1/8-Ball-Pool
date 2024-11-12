@@ -1,0 +1,141 @@
+from cmu_graphics import *
+import numpy as np
+import math
+
+def onAppStart(app):
+    app.stepsPerSecond = 240
+    app.cx = app.width/2
+    app.cy = app.height/2
+
+    app.pause = False
+
+    app.cube_vertices =  np.array([
+                                    [ 1, 1, -1, 1], 
+                                    [ -1, 1, -1, 1], 
+                                    [ -1, -1, -1, 1], 
+                                    [ 1, -1, -1, 1], 
+                                    [ 1, 1, 1, 1], 
+                                    [ -1, 1, 1, 1], 
+                                    [ -1, -1, 1, 1], 
+                                    [ 1, -1, 1, 1]     
+                                    ])
+
+    app.projectedPoints = [[0,0] for n in range(len(app.cube_vertices))]
+
+    app.x_rotation = 0
+    app.y_rotation = 0
+    app.z_rotation = 0
+
+    app.dx = 0
+    app.dy = 0
+    app.dz = 0
+
+    app.leftC = -3
+    app.rightC = 3
+    app.topC = 3
+    app.bottomC = -3
+    app.nearC = 5
+    app.farC = 10
+
+    #test
+    translation_vector = np.array([0, 2, -5, 0])
+
+    app.cube_vertices = app.cube_vertices + translation_vector
+
+def redrawAll(app):
+    project3DCube(app)
+
+
+def onStep(app):
+    if not app.pause:
+        #app.y_rotation -= .01
+        #print(app.y_rotation)
+        pass
+
+def onKeyPress(app, key):
+    if key == 'up':
+        app.dy -= .05
+    elif key == 'down':
+        app.dy += .05
+    if key == 'p':
+        app.pause = not app.pause
+
+def onKeyHold(app, keys):
+    if 'd' in keys:
+        app.y_rotation += .008
+    if 'a' in keys:
+        app.y_rotation -= .008
+    if 'w' in keys:
+        app.x_rotation += .008
+    if 's' in keys:
+        app.x_rotation -= .008
+    
+
+def project3DCube(app):
+    rotate_x = np.array([[1, 0, 0, 0],
+                         [0, math.cos(app.x_rotation), -math.sin(app.x_rotation), 0],
+                         [0, math.sin(app.x_rotation), math.cos(app.x_rotation), 0],
+                         [0, 0, 0, 1]
+                        ])
+    
+    rotate_y = np.array([[math.cos(app.y_rotation), 0, math.sin(app.y_rotation), 0],
+                         [0, 1, 0, 0],
+                         [-math.sin(app.y_rotation), 0, math.cos(app.y_rotation), 0],
+                         [0, 0, 0, 1]
+                        ])
+    
+    rotate_z = np.array([[math.cos(app.z_rotation), -math.sin(app.z_rotation), 0, 0],
+                         [math.sin(app.z_rotation), math.cos(app.z_rotation), 0, 0],
+                         [0, 0, 1, 0],
+                         [0, 0, 0 ,1]
+                        ])
+    
+    perspective_projection_matrix = np.array([[(2*app.nearC)/(app.rightC-app.leftC), 0, (app.rightC+app.leftC)/(app.rightC-app.leftC), 0],
+                                              [0, (2*app.nearC)/(app.topC-app.bottomC), (app.topC+app.bottomC)/(app.topC-app.bottomC), 0],
+                                              [0, 0, -(app.farC+app.nearC)/(app.farC-app.nearC), -( 2*app.farC*app.nearC)/(app.farC-app.nearC)],
+                                              [0, 0, -1, 0]]) 
+    
+    transformation_matrix = np.array([[1, 0, 0, app.dx],
+                                  [0, 1, 0, app.dy],
+                                  [0, 0, 1, app.dz],
+                                  [0, 0, 0, 1]
+                                  ])
+    
+    rotation_matrix = rotate_x @ rotate_y
+    camera_matrix = rotation_matrix @ transformation_matrix
+    
+    viewport_matrix = np.array([[app.width/2, 0, 0, (app.width-1)/2],
+                            [0, app.height/2, 0, (app.height-1)/2],
+                            [0, 0, 0.5, 0.5]
+                            ])     
+
+    i = 0
+    for vertex in app.cube_vertices:
+        projected2D = perspective_projection_matrix @ camera_matrix @ vertex.reshape(4,1)
+        projected2D = projected2D / projected2D[3]
+        projected2D = viewport_matrix @ projected2D
+
+        print(projected2D)
+        
+        x = int(projected2D[0][0])
+        y = int(projected2D[1][0])
+
+        drawCircle(x, y, 5)
+        app.projectedPoints[i] = (x, y) 
+        i += 1
+    
+    index = len(app.cube_vertices)//2
+    for i in range(index):
+        connectPoints(app, i, (i+1)%index)
+        connectPoints(app, i+index, (i+1)%index + index)
+        connectPoints(app, i, i+index)
+    
+def connectPoints(app, i, j):
+    if (app.projectedPoints[i][0] < 1500 and app.projectedPoints[i][1] < 1500 and 
+        app.projectedPoints[j][0] < 1500 and app.projectedPoints[j][1] < 1500):
+        drawLine(app.projectedPoints[i][0], app.projectedPoints[i][1], app.projectedPoints[j][0], app.projectedPoints[j][1])
+
+def main():
+    runApp(width=800, height=800)
+
+main()
