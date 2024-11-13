@@ -1,12 +1,14 @@
 from cmu_graphics import *
 from PIL import Image
+from settings import *
+import numpy as np
 
 def loadSpritePilImages(url, width, height, row, col, index=None):
     if isinstance(url, str):
         spritesheet = Image.open(url)
     else:
         spritesheet = url[index].image
-    
+
     spritePilImages = []
 
     for i in range(col):
@@ -21,7 +23,7 @@ class Ball():
     spritesheetPilImage = loadSpritePilImages('graphics/Pool Balls.png', 243, 108, 4, 4)
     CueBallSpritesheets = [CMUImage(pilImage) for pilImage in spritesheetPilImage]
 
-    def __init__(self, index, x, y):
+    def __init__(self, index, pos):
         self.spritesheet = loadSpritePilImages(self.CueBallSpritesheets, 27, 27, 9, 4, index)   
         length = int(len(self.spritesheet)/4)
 
@@ -37,8 +39,28 @@ class Ball():
         self.animationState = None
 
         self.index = 0
-        self.x = x
-        self.y = y
+        
+        self.pos = pos
+        self.v = np.array([0,0])
+        self.dt = 1/FPS
+        self.friction_coefficient = .98
+        self.stop_threshold = 3
+
+        self.in_motion = False
+
+    def update_physics(self, v):
+        self.v = v
+
+    def apply_physics(self):
+        if abs(self.v[0]) > self.stop_threshold or abs(self.v[1] > self.stop_threshold):
+            self.in_motion = True
+            self.pos = self.pos + (self.v*self.dt)
+        else:
+            self.in_motion = False
+            self.v = np.array([0,0])
+
+    def apply_friction(self):
+        self.v = self.v * self.friction_coefficient
 
     def setState(self, state):
         self.animationState = state
