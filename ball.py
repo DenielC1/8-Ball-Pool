@@ -41,8 +41,8 @@ class Ball():
         self.index = 0
         
         self.pos = pos
-        self.spin = np.array([0,0])
-        self.hitPos = np.array([0,0])
+        self.rotation = 0
+        self.hitPos = (0, 0)
         self.contactDir = np.array([0, 0])
         self.v = np.array([0,0])
         self.dt = 1/FPS
@@ -54,6 +54,10 @@ class Ball():
         self.frameDelay = 1
         self.count = 0
 
+    def update_rotation(self, power):
+        torque = (self.hitPos[0] * self.hitPos[1]) * power
+        self.rotation += torque * .01
+    
     def update_physics(self, v):
         self.v = v
 
@@ -67,6 +71,9 @@ class Ball():
 
     def apply_friction(self):
         self.v = self.v * self.friction_coefficient
+
+    def apply_rotation(self):
+        self.rotation *= .9
 
     def update_animation_state(self, contactDir):
         self.contactDir = contactDir
@@ -95,7 +102,7 @@ class Ball():
         self.currSprite = self.main_sprite
 
     def collided(self, wall_type):
-        x, y = self.contactDir[0], self.contactDir[1]
+        self.rotation += 1.1
         if wall_type == 'vertical_wall':
             self.v[0] *= -.8
         elif wall_type == 'horizontal_wall':
