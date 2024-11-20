@@ -62,7 +62,7 @@ class Ball():
         self.v = v
 
     def apply_physics(self):
-        if abs(self.v[0]) > self.stop_threshold or abs(self.v[1] > self.stop_threshold):
+        if abs(self.v[0]) > self.stop_threshold or abs(self.v[1]) > self.stop_threshold:
             self.in_motion = True
             self.pos = self.pos + (self.v*self.dt)
         else:
@@ -95,7 +95,7 @@ class Ball():
             else:
                 self.index += 1
             self.currSprite = animation_sprites[self.index]
-            self.frameDelay += 4
+            self.frameDelay += 7
         self.count += 1
 
     def notMoving(self):

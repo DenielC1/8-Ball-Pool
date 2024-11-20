@@ -36,10 +36,10 @@ def onAppStart(app):
 
     app.balls = [app.cueBall]
 
-    app.boundary_x = 73
+    app.boundary_x = 72
     app.boundary_y = 90
-    app.boundary_width = 655
-    app.boundary_height = 318
+    app.boundary_width = 657
+    app.boundary_height = 321
 
 def redrawAll(app):
     drawImage('graphics/Pool Table.png', app.table_cx, app.table_cy, align='center')
@@ -107,11 +107,12 @@ def onMouseDrag(app, mouseX, mouseY):
 def onMouseRelease(app, mouseX, mouseY):
     if app.isDraggingPower: 
         contactDirection = np.array([math.cos(math.radians(-app.cueStickAngle)), math.sin(math.radians(-app.cueStickAngle))])
-        power = (app.powerMeterX-app.powerMeterMinX)/(app.powerMeterMaxX-app.powerMeterMinX)* 1000 * contactDirection 
-        #print(f'Power: {power}')
+        power = (app.powerMeterX-app.powerMeterMinX)/(app.powerMeterMaxX-app.powerMeterMinX)* 1000
+        powerDirection = power * contactDirection 
+        print(f'Power: {powerDirection}')
 
-        app.cueBall.update_rotation((app.powerMeterX-app.powerMeterMinX)/(app.powerMeterMaxX-app.powerMeterMinX)* 1000)
-        app.cueBall.update_physics(-power)    
+        app.cueBall.update_rotation(power)
+        app.cueBall.update_physics(-powerDirection)    
         app.cueBall.update_animation_state(contactDirection)
         app.powerMeterX = app.powerMeterMinX
         app.balls_moving = True
@@ -144,13 +145,21 @@ def onStep(app):
 def wall_collision(app):
     ball_radius = 13
     for ball in app.balls:
-        if (ball.pos[0]-ball_radius < app.boundary_x or 
-            ball.pos[0]+ball_radius > app.boundary_x + app.boundary_width):
+        if ball.pos[0]-ball_radius < app.boundary_x:
+            ball.pos[0] = app.boundary_x + ball_radius
+            ball.collided('vertical_wall')
+            ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
+        elif ball.pos[0]+ball_radius > app.boundary_x + app.boundary_width:
+            ball.pos[0] = app.boundary_x + app.boundary_width - ball_radius
             ball.collided('vertical_wall')
             ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
 
-        elif (ball.pos[1]-ball_radius < app.boundary_y or 
-            ball.pos[1]+ball_radius > app.boundary_y + app.boundary_height):
+        if ball.pos[1]-ball_radius < app.boundary_y:
+            ball.pos[1] = app.boundary_y + ball_radius
+            ball.collided('horizontal_wall')
+            ball.update_animation_state((ball.contactDir[0], ball.contactDir[1] * -1))
+        elif ball.pos[1]+ball_radius > app.boundary_y + app.boundary_height:
+            ball.pos[1] = app.boundary_y + app.boundary_height - ball_radius
             ball.collided('horizontal_wall')
             ball.update_animation_state((ball.contactDir[0], ball.contactDir[1] * -1))
 
