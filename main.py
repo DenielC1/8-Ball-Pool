@@ -20,14 +20,22 @@ def onAppStart(app):
     app.powerMeterY = 588
     app.powerMeterMinX = 336
     app.powerMeterMaxX = 543
-    app.powerMeterLength = 207
+    app.powerMeterLength = 300
     app.powerMeterHeight = 12
+
     app.prevX = None
 
     app.isDraggingPower = False
     app.balls_moving = False
 
-    app.cueBall = Ball(0, np.array([app.table_cx, app.table_cy], dtype=int))
+    app.cueBall = Ball(12, np.array([app.table_cx, app.table_cy], dtype=int))
+
+    app.balls = [app.cueBall]
+
+    app.boundary_x = 73
+    app.boundary_y = 90
+    app.boundary_width = 655
+    app.boundary_height = 318
 
 def redrawAll(app):
     drawImage('graphics/Pool Table.png', app.table_cx, app.table_cy, align='center')
@@ -50,31 +58,13 @@ def drawPowerMeter(app):
     
     #ball sprite
     drawImage('graphics/powermeter/cue ball.png', 282, 594, align='left')
-    
-
-def drawBoundaries(app):
-    #top
-    t1 = drawPolygon(102, 79, 369, 79, 363, 88, 108, 88, fill='red')
-    t2 = drawPolygon(429, 79, 699, 79, 693, 88, 435, 88, fill='red')
-    
-    #bottom
-    b1 = drawPolygon(102, 415, 369, 415, 366, 407, 111, 407, fill='red')
-    b2 = drawPolygon(429, 415, 699, 415, 693, 407, 435, 407, fill='red')
-
-    #left
-    l1 = drawPolygon(64, 111,64, 381, 73, 366, 73, 126, fill='red')
-
-    #right
-    r1 = drawPolygon(738, 111,738, 381, 729, 366, 729, 126, fill='red')    
-    
-
-def drawPockets(app):
-    pass
 
 def onKeyPress(app, key):
     pass
 
 def onMouseMove(app, mouseX, mouseY):
+    #print(mouseX, mouseY)
+    
     if not app.cueStickPlaced:
         app.cueStickAngle = math.degrees(math.atan2(app.cueBall.pos[1]-mouseY, mouseX-app.cueBall.pos[0]))%360
 
@@ -102,7 +92,7 @@ def onMouseRelease(app, mouseX, mouseY):
         #print(f'Power: {power}')
 
         app.cueBall.update_physics(-power)    
-        app.cueBall.setState('horizontal')
+        app.cueBall.update_animation_state(contactDirection)
         app.powerMeterX = app.powerMeterMinX
         app.balls_moving = True
         app.isDraggingPower = False
@@ -112,13 +102,31 @@ def onStep(app):
     if app.balls_moving:
         app.cueBall.apply_physics()
         app.cueBall.apply_friction()
+        wall_collision(app)
 
-        #temp
         app.cueBall.nextSprite()
 
         if not app.cueBall.in_motion:
+            
             app.balls_moving = False
             app.cueStickPlaced = False
+
+    else:
+        for ball in app.balls:
+            ball.notMoving()
+
+def wall_collision(app):
+    ball_radius = 13
+    for ball in app.balls:
+        if (ball.pos[0]-ball_radius < app.boundary_x or 
+            ball.pos[0]+ball_radius > app.boundary_x + app.boundary_width):
+            ball.collided('vertical_wall')
+            ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
+
+        elif (ball.pos[1]-ball_radius < app.boundary_y or 
+            ball.pos[1]+ball_radius > app.boundary_y + app.boundary_height):
+            ball.collided('horizontal_wall')
+            ball.update_animation_state((ball.contactDir[0], ball.contactDir[1] * -1))
 
 def main():
     runApp(width=800, height=700)

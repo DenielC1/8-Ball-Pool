@@ -41,12 +41,16 @@ class Ball():
         self.index = 0
         
         self.pos = pos
+        self.contactDir = np.array([0, 0])
         self.v = np.array([0,0])
         self.dt = 1/FPS
         self.friction_coefficient = .98
-        self.stop_threshold = 3
+        self.stop_threshold = 20
 
         self.in_motion = False
+
+        self.frameDelay = 1
+        self.count = 0
 
     def update_physics(self, v):
         self.v = v
@@ -62,16 +66,38 @@ class Ball():
     def apply_friction(self):
         self.v = self.v * self.friction_coefficient
 
-    def setState(self, state):
-        self.animationState = state
+    def update_animation_state(self, contactDir):
+        self.contactDir = contactDir
+        x, y = contactDir[0], contactDir[1]
+        if -0.05 < x < 0.05 and (y < 0 or y > 0):
+            self.animationState = 'vertical'
+        elif -0.05 < y < 0.05 and (x < 0 or x > 0):
+            self.animationState = 'horizontal'
+        elif (x > 0 and y < 0) or (x < 0 and y > 0):
+            self.animationState = 'diagonal_right'
+        elif (x > 0 and y > 0) or (x<0 and y < 0):
+            self.animationState = 'diagonal_left'
 
     def nextSprite(self):
-        animation_sprites = self.animation_sprites.get(self.animationState)
-        if self.index == len(animation_sprites)-1:
-            self.index = 0
-        else:
-            self.index += 1
-        self.currSprite = animation_sprites[self.index]
+        if self.count == self.frameDelay: 
+            animation_sprites = self.animation_sprites.get(self.animationState)
+            if self.index == len(animation_sprites)-1:
+                self.index = 0
+            else:
+                self.index += 1
+            self.currSprite = animation_sprites[self.index]
+            self.frameDelay += 4
+        self.count += 1
+
+    def notMoving(self):
+        self.currSprite = self.main_sprite
+
+    def collided(self, wall_type):
+        x, y = self.contactDir[0], self.contactDir[1]
+        if wall_type == 'vertical_wall':
+            self.v[0] *= -1
+        elif wall_type == 'horizontal_wall':
+            self.v[1] *= -1
 
 
 
