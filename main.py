@@ -1,6 +1,7 @@
 from cmu_graphics import *
 import numpy as np
 import math
+import random
 
 from ball import Ball
 from settings import *
@@ -10,6 +11,9 @@ def onAppStart(app):
 
     app.table_cx = app.width/2
     app.table_cy = app.height/2-100
+
+    app.cueBallStartX = app.width/2+168
+    app.startingRackX = app.width/2-168
 
     app.other_cy = app.height/2+220
     
@@ -32,9 +36,34 @@ def onAppStart(app):
     app.isDraggingContactPoint = False
     app.balls_moving = False
 
-    app.cueBall = Ball(12, np.array([app.table_cx, app.table_cy], dtype=int))
+    app.cueBall = Ball(0, np.array([app.cueBallStartX, app.table_cy]))
+
+    app.ballTypeSetup = [[0],
+                         [1,0],
+                         [0,8,1],
+                         [1,0,1,0],
+                         [0,1,1,0,1]
+                        ]
 
     app.balls = [app.cueBall]
+
+    solids = [1, 2, 3, 4, 5, 6, 7]
+    stripes = [9, 10, 11, 12, 13, 14, 15]
+
+
+    for i in range(len(app.ballTypeSetup)):
+        for j in range(len(app.ballTypeSetup[i])):
+            if app.ballTypeSetup[i][j] == 0:
+                index = random.randint(0, len(solids)-1)
+                num = solids.pop(index)
+            elif app.ballTypeSetup[i][j] == 1:
+                index = random.randint(0, len(stripes)-1)
+                num = stripes.pop(index)
+            elif app.ballTypeSetup[i][j] == 8:
+                num = 8
+            x_offset = i*21
+            y_offset = j*24-(len(app.ballTypeSetup[i])-1)*12
+            app.balls.append(Ball(num, np.array([app.startingRackX-x_offset, app.table_cy-y_offset])))
 
     app.boundary_x = 72
     app.boundary_y = 90
@@ -44,37 +73,27 @@ def onAppStart(app):
 def redrawAll(app):
     drawImage('graphics/Pool Table.png', app.table_cx, app.table_cy, align='center')
     
-    x, y = app.cueBall.pos
-    drawImage(app.cueBall.currSprite, int(x)-12, int(y)-12, rotateAngle=app.cueBall.rotation)
+    for ball in app.balls:
+        x, y = ball.pos
+        drawImage(ball.currSprite, int(x)-12, int(y)-12, rotateAngle=ball.rotation)
+
     if not app.balls_moving:
-        drawImage('graphics/cue stick.png', int(x)-250, int(y)-6, rotateAngle=-app.cueStickAngle)
+        drawImage('graphics/cue stick.png', int(app.cueBall.pos[0])-250, int(app.cueBall.pos[1])-6, rotateAngle=-app.cueStickAngle)
 
     drawImage('graphics/other.png', app.table_cx, app.other_cy, align='center')
-    
     drawImage('graphics/spin_selector.png', app.hitPos[0], app.hitPos[1])
 
 
     drawPowerMeter(app)
 
 def drawPowerMeter(app):
-    #hitbox
     drawRect(app.powerMeterX, app.powerMeterY, app.powerMeterLength, app.powerMeterHeight) 
-    
-    #cue stick sprite
     drawImage('graphics/powermeter/other cue stick.png', app.powerMeterX, app.powerMeterY, align='left')
-    
-    #ball sprite
     drawImage('graphics/powermeter/cue ball.png', 282, 594, align='left')
 
-def onKeyPress(app, key):
-    pass
-
 def onMouseMove(app, mouseX, mouseY):
-    #print(mouseX, mouseY)
-    
     if not app.cueStickPlaced:
         app.cueStickAngle = math.degrees(math.atan2(app.cueBall.pos[1]-mouseY, mouseX-app.cueBall.pos[0]))%360
-        #print(app.cueStickAngle)
     
 
 def onMousePress(app, mouseX, mouseY):

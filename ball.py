@@ -95,7 +95,7 @@ class Ball():
             else:
                 self.index += 1
             self.currSprite = animation_sprites[self.index]
-            self.frameDelay += 7
+            self.frameDelay += 4
         self.count += 1
 
     def notMoving(self):
