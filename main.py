@@ -23,9 +23,13 @@ def onAppStart(app):
     app.powerMeterLength = 300
     app.powerMeterHeight = 12
 
+    app.centerPos = (121, 564)
+    app.spinPos = app.centerPos
+
     app.prevX = None
 
     app.isDraggingPower = False
+    app.isDraggingContactPoint = False
     app.balls_moving = False
 
     app.cueBall = Ball(12, np.array([app.table_cx, app.table_cy], dtype=int))
@@ -46,6 +50,9 @@ def redrawAll(app):
         drawImage('graphics/cue stick.png', int(x)-250, int(y)-6, rotateAngle=-app.cueStickAngle)
 
     drawImage('graphics/other.png', app.table_cx, app.other_cy, align='center')
+    
+    drawImage('graphics/spin_selector.png', app.spinPos[0], app.spinPos[1])
+
 
     drawPowerMeter(app)
 
@@ -67,6 +74,8 @@ def onMouseMove(app, mouseX, mouseY):
     
     if not app.cueStickPlaced:
         app.cueStickAngle = math.degrees(math.atan2(app.cueBall.pos[1]-mouseY, mouseX-app.cueBall.pos[0]))%360
+        #print(app.cueStickAngle)
+    
 
 def onMousePress(app, mouseX, mouseY):
     if not app.cueStickPlaced:
@@ -76,6 +85,9 @@ def onMousePress(app, mouseX, mouseY):
             app.powerMeterY <= mouseY <= app.powerMeterY+app.powerMeterHeight):
             app.isDraggingPower = True
             app.prevX = mouseX
+        if (app.spinPos[0] <= mouseX < app.spinPos[0]+12 and 
+            app.spinPos[1] <= mouseY < app.spinPos[1]+12):
+                app.isDraggingContactPoint = True
 
 def onMouseDrag(app, mouseX, mouseY):
     if app.isDraggingPower:
@@ -84,6 +96,13 @@ def onMouseDrag(app, mouseX, mouseY):
             app.powerMeterX  = app.powerMeterMinX
         elif app.powerMeterX >= app.powerMeterMaxX:
             app.powerMeterX  = app.powerMeterMaxX
+    if app.isDraggingContactPoint:
+        if distance(mouseX, mouseY, app.centerPos[0], app.centerPos[1]) < 63:
+            app.spinPos = mouseX, mouseY
+        else:
+            degree =  angleTo(app.centerPos[0], app.centerPos[1], mouseX, mouseY)
+            app.spinPos = getPointInDir(app.centerPos[0], app.centerPos[1], degree, 63)
+
 
 def onMouseRelease(app, mouseX, mouseY):
     if app.isDraggingPower: 
@@ -97,6 +116,9 @@ def onMouseRelease(app, mouseX, mouseY):
         app.balls_moving = True
         app.isDraggingPower = False
         app.prevX = None
+    
+    if app.isDraggingContactPoint:
+        app.isDraggingContactPoint = False
 
 def onStep(app):
     if app.balls_moving:

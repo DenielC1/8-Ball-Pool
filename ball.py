@@ -41,6 +41,8 @@ class Ball():
         self.index = 0
         
         self.pos = pos
+        self.spin = np.array([0,0])
+        self.hitPos = np.array([0,0])
         self.contactDir = np.array([0, 0])
         self.v = np.array([0,0])
         self.dt = 1/FPS
@@ -95,9 +97,9 @@ class Ball():
     def collided(self, wall_type):
         x, y = self.contactDir[0], self.contactDir[1]
         if wall_type == 'vertical_wall':
-            self.v[0] *= -1
+            self.v[0] *= -.8
         elif wall_type == 'horizontal_wall':
-            self.v[1] *= -1
+            self.v[1] *= -.8
 
 
 
