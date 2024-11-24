@@ -44,11 +44,11 @@ class Ball():
         self.rotation = 0
         self.hitPos = (0, 0)
         self.contactDir = np.array([0, 0])
-        self.v = np.array([0,0])
+        self.v = np.array([0,0], dtype=float)
         self.dt = 1/FPS
         self.friction_coefficient = .98
         self.stop_threshold = 20
-
+  
         self.in_motion = False
 
         self.frameDelay = 1
@@ -101,14 +101,35 @@ class Ball():
     def notMoving(self):
         self.currSprite = self.main_sprite
 
-    def collided(self, wall_type):
-        self.rotation += 1.1
-        if wall_type == 'vertical_wall':
+    def collidedWall(self, collision_type):
+        self.rotation *= 1.1
+        if collision_type == 'vertical_wall':
             self.v[0] *= -.8
-        elif wall_type == 'horizontal_wall':
+        elif collision_type == 'horizontal_wall':
             self.v[1] *= -.8
 
+    def collidedBall(self, other):
+        contact_angle = np.arctan2(self.pos[1]-other.pos[1], self.pos[0]-other.pos[0])
 
+        rotation_matrix = np.array([[np.cos(contact_angle), np.sin(contact_angle)], 
+                                    [-np.sin(contact_angle), np.cos(contact_angle)]])
 
+        inverse_rotation_matrix = np.array([[np.cos(contact_angle), -np.sin(contact_angle)],
+                                           [np.sin(contact_angle), np.cos(contact_angle)]])
 
+        self.v = self.v @ rotation_matrix
+        other.v = other.v @ rotation_matrix
 
+        self.v[0], other.v[0] = other.v[0], self.v[0]
+
+        self.v = self.v @ inverse_rotation_matrix
+        other.v = other.v @ inverse_rotation_matrix
+
+        ball_radius = 12
+        dist = distance(self.pos[0], self.pos[1], other.pos[0], other.pos[1])
+        overlap = 2 * ball_radius - dist
+        if overlap > 0:
+            correction = overlap / 2
+            direction = (other.pos - self.pos) / dist  
+            self.pos -= correction * direction
+            other.pos += correction * direction

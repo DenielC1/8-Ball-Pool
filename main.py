@@ -8,6 +8,7 @@ from settings import *
 
 def onAppStart(app):
     app.stepsPerSecond = FPS
+    app.paused = False
 
     app.table_cx = app.width/2
     app.table_cy = app.height/2-100
@@ -36,34 +37,9 @@ def onAppStart(app):
     app.isDraggingContactPoint = False
     app.balls_moving = False
 
-    app.cueBall = Ball(0, np.array([app.cueBallStartX, app.table_cy]))
-
-    app.ballTypeSetup = [[0],
-                         [1,0],
-                         [0,8,1],
-                         [1,0,1,0],
-                         [0,1,1,0,1]
-                        ]
-
-    app.balls = [app.cueBall]
-
-    solids = [1, 2, 3, 4, 5, 6, 7]
-    stripes = [9, 10, 11, 12, 13, 14, 15]
-
-
-    for i in range(len(app.ballTypeSetup)):
-        for j in range(len(app.ballTypeSetup[i])):
-            if app.ballTypeSetup[i][j] == 0:
-                index = random.randint(0, len(solids)-1)
-                num = solids.pop(index)
-            elif app.ballTypeSetup[i][j] == 1:
-                index = random.randint(0, len(stripes)-1)
-                num = stripes.pop(index)
-            elif app.ballTypeSetup[i][j] == 8:
-                num = 8
-            x_offset = i*21
-            y_offset = j*24-(len(app.ballTypeSetup[i])-1)*12
-            app.balls.append(Ball(num, np.array([app.startingRackX-x_offset, app.table_cy-y_offset])))
+    app.cueBall = None
+    app.balls = []
+    setupBalls(app)
 
     app.boundary_x = 72
     app.boundary_y = 90
@@ -90,6 +66,72 @@ def drawPowerMeter(app):
     drawRect(app.powerMeterX, app.powerMeterY, app.powerMeterLength, app.powerMeterHeight) 
     drawImage('graphics/powermeter/other cue stick.png', app.powerMeterX, app.powerMeterY, align='left')
     drawImage('graphics/powermeter/cue ball.png', 282, 594, align='left')
+
+def onKeyPress(app, key):
+    if key == 'p':
+        app.paused = not app.paused
+    if key == 'enter':
+        takeStep(app)
+    if key == 'r':
+        resetGame(app)
+    if key == 'up':
+        app.cueBall.pos = np.array([app.table_cx, app.table_cy-90])
+        app.cueStickAngle = 90
+        app.cueStickPlaced = True
+    if key == 'down':
+        app.cueBall.pos = np.array([app.table_cx, app.table_cy+90])
+        app.cueStickAngle = 270
+        app.cueStickPlaced = True
+    if key == 'right':
+        app.cueBall.pos = np.array([app.cueBallStartX, app.table_cy])
+        app.cueStickAngle = 0
+        app.cueStickPlaced = True
+    if key == 'left':
+        app.cueBall.pos = np.array([app.startingRackX, app.table_cy])
+        app.cueStickAngle = 180
+        app.cueStickPlaced = True
+
+def resetGame(app):
+    app.balls = []
+    setupBalls(app)
+    app.isDraggingPower = False
+    app.isDraggingContactPoint = False
+    app.balls_moving = False
+    app.cueStickPlaced = False
+    app.paused = False
+
+
+def setupBalls(app):
+
+    app.cueBall = Ball(0, np.array([app.cueBallStartX, app.table_cy]))
+    app.balls.append(app.cueBall)
+
+    #app.balls.append(Ball(15, np.array([app.table_cx, app.table_cy])))
+    #app.balls.append(Ball(5, np.array([app.table_cx-45, app.table_cy])))
+
+    ballTypeSetup = [[0],
+                     [1,0],
+                     [0,8,1],
+                     [1,0,1,0],
+                     [0,1,1,0,1]
+                    ]
+    
+    solids = [1, 2, 3, 4, 5, 6, 7]
+    stripes = [9, 10, 11, 12, 13, 14, 15]
+    
+    for i in range(len(ballTypeSetup)):
+        for j in range(len(ballTypeSetup[i])):
+            if ballTypeSetup[i][j] == 0:
+                index = random.randint(0, len(solids)-1)
+                num = solids.pop(index)
+            elif ballTypeSetup[i][j] == 1:
+                index = random.randint(0, len(stripes)-1)
+                num = stripes.pop(index)
+            elif ballTypeSetup[i][j] == 8:
+                num = 8
+            x_offset = i*21
+            y_offset = j*24-(len(ballTypeSetup[i])-1)*12
+            app.balls.append(Ball(num, np.array([app.startingRackX-x_offset, app.table_cy-y_offset])))
 
 def onMouseMove(app, mouseX, mouseY):
     if not app.cueStickPlaced:
@@ -126,9 +168,9 @@ def onMouseDrag(app, mouseX, mouseY):
 def onMouseRelease(app, mouseX, mouseY):
     if app.isDraggingPower: 
         contactDirection = np.array([math.cos(math.radians(-app.cueStickAngle)), math.sin(math.radians(-app.cueStickAngle))])
-        power = (app.powerMeterX-app.powerMeterMinX)/(app.powerMeterMaxX-app.powerMeterMinX)* 1000
+        power = (app.powerMeterX-app.powerMeterMinX)/(app.powerMeterMaxX-app.powerMeterMinX)* 3000
         powerDirection = power * contactDirection 
-        print(f'Power: {powerDirection}')
+        #print(f'Power: {powerDirection}')
 
         app.cueBall.update_rotation(power)
         app.cueBall.update_physics(-powerDirection)    
@@ -143,15 +185,21 @@ def onMouseRelease(app, mouseX, mouseY):
         app.isDraggingContactPoint = False
 
 def onStep(app):
+    if not app.paused:
+        takeStep(app)
+
+def takeStep(app):
     if app.balls_moving:
-        app.cueBall.apply_physics()
-        app.cueBall.apply_friction()
-        wall_collision(app)
+        for ball in app.balls:
+            ball.apply_physics()
+            ball.apply_friction()
+            wall_collision(app)
+            ball_collision(app)
 
-        app.cueBall.nextSprite()
+            if ball.in_motion:
+                ball.nextSprite()
 
-        if not app.cueBall.in_motion:
-            
+        if not areBallsMoving(app):
             app.balls_moving = False
             app.hitPos = app.centerPos
             app.cueBall.hitPos = (0,0)
@@ -161,26 +209,46 @@ def onStep(app):
         for ball in app.balls:
             ball.notMoving()
 
+def areBallsMoving(app):
+    for ball in app.balls:
+        if ball.in_motion:
+            return True
+    return False
+
 def wall_collision(app):
     ball_radius = 13
     for ball in app.balls:
         if ball.pos[0]-ball_radius < app.boundary_x:
             ball.pos[0] = app.boundary_x + ball_radius
-            ball.collided('vertical_wall')
+            ball.collidedWall('vertical_wall')
             ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
+
         elif ball.pos[0]+ball_radius > app.boundary_x + app.boundary_width:
             ball.pos[0] = app.boundary_x + app.boundary_width - ball_radius
-            ball.collided('vertical_wall')
+            ball.collidedWall('vertical_wall')
             ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
 
         if ball.pos[1]-ball_radius < app.boundary_y:
             ball.pos[1] = app.boundary_y + ball_radius
-            ball.collided('horizontal_wall')
+            ball.collidedWall('horizontal_wall')
             ball.update_animation_state((ball.contactDir[0], ball.contactDir[1] * -1))
+
         elif ball.pos[1]+ball_radius > app.boundary_y + app.boundary_height:
             ball.pos[1] = app.boundary_y + app.boundary_height - ball_radius
-            ball.collided('horizontal_wall')
+            ball.collidedWall('horizontal_wall')
             ball.update_animation_state((ball.contactDir[0], ball.contactDir[1] * -1))
+
+def ball_collision(app):
+    ball_radius = 12
+    for ball1 in app.balls:
+        for ball2 in app.balls:
+            if ball1 != ball2:
+                dist = distance(ball1.pos[0], ball1.pos[1], ball2.pos[0], ball2.pos[1])
+                if dist <= 2*ball_radius:
+                    ball1.collidedBall(ball2)
+                    ball1.update_animation_state((ball1.contactDir[0], ball1.contactDir[1] * -1))
+                    ball2.update_animation_state((ball1.contactDir[0], ball1.contactDir[1] * -1))
+
 
 def main():
     runApp(width=800, height=700)
