@@ -193,8 +193,8 @@ def takeStep(app):
         for ball in app.balls:
             ball.apply_physics()
             ball.apply_friction()
-            wall_collision(app)
             ball_collision(app)
+            wall_collision(app)
 
             if ball.in_motion:
                 ball.nextSprite()
@@ -216,27 +216,39 @@ def areBallsMoving(app):
     return False
 
 def wall_collision(app):
-    ball_radius = 13
+    ball_radius = 12
+    wall_y = 126
+    wall_height = 252
+    wall_x1 = 105
+    wall_x2 = 432
+    wall_width = 261
+
     for ball in app.balls:
-        if ball.pos[0]-ball_radius < app.boundary_x:
-            ball.pos[0] = app.boundary_x + ball_radius
-            ball.collidedWall('vertical_wall')
-            ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
+        if wall_y < ball.pos[1] < wall_y + wall_height:
+            if ball.pos[0]-ball_radius < app.boundary_x:
+                ball.pos[0] = app.boundary_x + ball_radius
+                ball.collidedWall('vertical_wall')
+                ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
+            elif ball.pos[0]+ball_radius > app.boundary_x + app.boundary_width:
+                ball.pos[0] = app.boundary_x + app.boundary_width - ball_radius
+                ball.collidedWall('vertical_wall')
+                ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
+        elif (ball.pos[0]< app.boundary_x - ball_radius or
+              ball.pos[0] > app.boundary_x + app.boundary_width + ball_radius):
+            app.balls.remove(ball)
 
-        elif ball.pos[0]+ball_radius > app.boundary_x + app.boundary_width:
-            ball.pos[0] = app.boundary_x + app.boundary_width - ball_radius
-            ball.collidedWall('vertical_wall')
-            ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
-
-        if ball.pos[1]-ball_radius < app.boundary_y:
-            ball.pos[1] = app.boundary_y + ball_radius
-            ball.collidedWall('horizontal_wall')
-            ball.update_animation_state((ball.contactDir[0], ball.contactDir[1] * -1))
-
-        elif ball.pos[1]+ball_radius > app.boundary_y + app.boundary_height:
-            ball.pos[1] = app.boundary_y + app.boundary_height - ball_radius
-            ball.collidedWall('horizontal_wall')
-            ball.update_animation_state((ball.contactDir[0], ball.contactDir[1] * -1))
+        if (wall_x1 < ball.pos[0]< wall_x1 + wall_width or wall_x2 < ball.pos[0]< wall_x2 + wall_width):
+            if ball.pos[1]-ball_radius < app.boundary_y:
+                ball.pos[1] = app.boundary_y + ball_radius
+                ball.collidedWall('horizontal_wall')
+                ball.update_animation_state((ball.contactDir[0], ball.contactDir[1] * -1))
+            elif ball.pos[1]+ball_radius > app.boundary_y + app.boundary_height:
+                ball.pos[1] = app.boundary_y + app.boundary_height - ball_radius
+                ball.collidedWall('horizontal_wall')
+                ball.update_animation_state((ball.contactDir[0], ball.contactDir[1] * -1))
+        elif (ball.pos[1] < app.boundary_y - ball_radius or
+              ball.pos[1] > app.boundary_y + app.boundary_height + ball_radius):
+            app.balls.remove(ball)
 
 def ball_collision(app):
     ball_radius = 12
@@ -245,9 +257,9 @@ def ball_collision(app):
             if ball1 != ball2:
                 dist = distance(ball1.pos[0], ball1.pos[1], ball2.pos[0], ball2.pos[1])
                 if dist <= 2*ball_radius:
-                    ball1.collidedBall(ball2)
                     ball1.update_animation_state((ball1.contactDir[0], ball1.contactDir[1] * -1))
                     ball2.update_animation_state((ball1.contactDir[0], ball1.contactDir[1] * -1))
+                    ball1.collidedBall(ball2)
 
 
 def main():
