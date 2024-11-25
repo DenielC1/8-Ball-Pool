@@ -22,9 +22,11 @@ def loadSpritePilImages(url, width, height, row, col, index=None):
 class Ball():
     spritesheetPilImage = loadSpritePilImages('graphics/Pool Balls.png', 243, 108, 4, 4)
     CueBallSpritesheets = [CMUImage(pilImage) for pilImage in spritesheetPilImage]
+    friction_coefficient = .98
+    stop_threshold = 20
 
-    def __init__(self, index, pos):
-        self.spritesheet = loadSpritePilImages(self.CueBallSpritesheets, 27, 27, 9, 4, index)   
+    def __init__(self, num, pos):
+        self.spritesheet = loadSpritePilImages(self.CueBallSpritesheets, 27, 27, 9, 4, num)   
         length = int(len(self.spritesheet)/4)
 
         self.main_sprite = CMUImage(self.spritesheet[0])
@@ -35,36 +37,35 @@ class Ball():
                                   'diagonal_left' : [CMUImage(self.spritesheet[i]) for i in range(length*3+1, length*4+1)]
                                 }
 
+        self.num = num
+        self.type = "cueball" if num == 0 else '8ball' if num == 8 else 'solids' if 0<num<8 else 'stripes'
+        self.radius = 12
+
         self.currSprite = self.main_sprite
         self.animationState = None
-
         self.index = 0
+        self.frameDelay = 1
+        self.count = 0
         
         self.pos = pos
         self.rotation = 0
-        self.hitPos = (0, 0)
+        self.hit_pos = (0, 0)
         self.contactDir = np.array([0, 0])
         self.v = np.array([0,0], dtype=float)
-        self.dt = 1/FPS
-        self.friction_coefficient = .98
-        self.stop_threshold = 20
   
         self.in_motion = False
 
-        self.frameDelay = 1
-        self.count = 0
-
     def update_rotation(self, power):
-        torque = (self.hitPos[0] * self.hitPos[1]) * power
+        torque = (self.hit_pos[0] * self.hit_pos[1]) * power
         self.rotation += torque * .01
     
     def update_physics(self, v):
         self.v = v
 
-    def apply_physics(self):
+    def apply_physics(self, dt):
         if abs(self.v[0]) > self.stop_threshold or abs(self.v[1]) > self.stop_threshold:
             self.in_motion = True
-            self.pos = self.pos + (self.v*self.dt)
+            self.pos = self.pos + (self.v*dt)
         else:
             self.in_motion = False
             self.v = np.array([0,0])
@@ -125,9 +126,8 @@ class Ball():
         self.v = self.v @ inverse_rotation_matrix
         other.v = other.v @ inverse_rotation_matrix
 
-        ball_radius = 12
         dist = distance(self.pos[0], self.pos[1], other.pos[0], other.pos[1])
-        overlap = 2 * ball_radius - dist
+        overlap = 2 * self.radius - dist
         if overlap > 0:
             correction = overlap / 2
             direction = (other.pos - self.pos) / dist  
