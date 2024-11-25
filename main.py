@@ -8,7 +8,7 @@ def onAppStart(app):
     app.paused = False
 
     app.game = Game()
-
+    
 def redrawAll(app):
     app.game.setupTable()
 
@@ -20,11 +20,20 @@ def takeStep(app):
     app.game.ball_movement()
 
 def onMouseMove(app, mouseX, mouseY):
-    if not app.game.cuestickPlaced:
-        app.game.selecting_direction(mouseX, mouseY)
+    if app.game.ballsMoving == False:
+        if app.game.playerScratched: 
+            app.game.placing_cueball(mouseX, mouseY)
+        elif not app.game.cuestickPlaced:
+            app.game.selecting_direction(mouseX, mouseY)
+    
+
 
 def onMousePress(app, mouseX, mouseY):
-    if not app.game.cuestickPlaced:
+    if app.game.playerScratched:
+        app.game.playerScratched = False
+        app.game.cueball_placed()
+
+    elif not app.game.cuestickPlaced:
         app.game.place_cuestick()
     else:
         app.game.has_clicked_powermeter(mouseX, mouseY)

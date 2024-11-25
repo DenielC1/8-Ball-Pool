@@ -3,13 +3,14 @@ import random
 import numpy as np
 from ball import Ball
 from settings import *
+import time 
 
 class Game:
     #Constants
-    cueBallStartX = WIDTH/2+168
+    cueballStartX = WIDTH/2+168
     startingRackX = WIDTH/2-168
     table_cx = WIDTH/2
-    table_cy = HEIGHT/2-100
+    table_cy = HEIGHT/2-101
     other_cy = HEIGHT/2+220
 
     powerMeterY = 588
@@ -20,8 +21,16 @@ class Game:
 
     boundary_x = 72
     boundary_y = 90
-    boundary_width = 657
-    boundary_height = 321
+    boundary_width = 654
+    boundary_height = 318
+
+    wall_y = 123
+    wall_height = 258
+    wall_x1 = 105
+    wall_x2 = 432
+    wall_width = 264
+
+    wait_time = 2
 
     def __init__ (self):
 
@@ -34,7 +43,7 @@ class Game:
         self.any_balls_in = False
 
         #Balls
-        self.cueBall = None
+        self.cueball = None
         self.balls = []
         self.solid_balls = []
         self.stripe_balls = []
@@ -54,6 +63,8 @@ class Game:
         self.isDraggingPowermeter = False
         self.isDraggingHitpos = False
         self.ballsMoving = False
+        self.hitBall = False
+        self.playerScratched = True
 
     def setupTable(self):
         drawImage('graphics/Pool Table.png', self.table_cx, self.table_cy, align='center')
@@ -64,12 +75,20 @@ class Game:
             x, y = ball.pos
             drawImage(ball.currSprite, int(x)-12, int(y)-12, rotateAngle=ball.rotation)
 
-        if not self.ballsMoving:
-            drawImage('graphics/cue stick.png', int(self.cueBall.pos[0])-250, int(self.cueBall.pos[1])-6, rotateAngle=-self.cuestick_angle)
+        if not self.ballsMoving and not self.playerScratched:
+            drawImage('graphics/cue stick.png', int(self.cueball.pos[0])-250, int(self.cueball.pos[1])-6, rotateAngle=-self.cuestick_angle)
 
         self.drawPowerMeter()
 
-        drawLabel(self.current_turn, 10, 10, align='left')
+        if self.any_balls_in:
+            player1_type = self.player_balls['player1'][0].type
+            player2_type = self.player_balls['player2'][0].type
+            player1_balls_left = len(self.player_balls['player1'])
+            player2_balls_left = len(self.player_balls['player2'])
+            drawLabel(f'Player 1: {player1_type} | Balls Left: {player1_balls_left}', 10, 10, align='left')
+            drawLabel(f'Player 2: {player2_type} | Balls Left: {player2_balls_left}', 10, 20, align='left')
+
+        drawLabel(f'Current Turn: {self.current_turn}', self.table_cx, 10)
 
     def drawPowerMeter(self):
         drawRect(self.powerMeterX, self.powerMeterY, self.powerMeterLength, self.powerMeterHeight) 
@@ -77,8 +96,8 @@ class Game:
         drawImage('graphics/powermeter/cue ball.png', 282, 594, align='left')
 
     def setupBalls(self):
-        self.cueBall = Ball(0, np.array([self.cueBallStartX, self.table_cy]))
-        self.balls.append(self.cueBall)
+        self.cueball = Ball(0, np.array([self.cueballStartX, self.table_cy]))
+        self.balls.append(self.cueball)
 
         ballTypeSetup = [[0],
                         [1,0],
@@ -111,7 +130,7 @@ class Game:
                 self.balls.append(ball)        
 
     def selecting_direction(self, mouseX, mouseY):
-        self.cuestick_angle = int(np.degrees(np.atan2(self.cueBall.pos[1]-mouseY, mouseX-self.cueBall.pos[0]))%360)
+        self.cuestick_angle = int(np.degrees(np.atan2(self.cueball.pos[1]-mouseY, mouseX-self.cueball.pos[0]))%360)
     
     def place_cuestick(self):
         self.cuestickPlaced = True
@@ -135,9 +154,9 @@ class Game:
         powerDirection = power * contactDirection 
         #print(f'Power: {powerDirection}')
 
-        self.cueBall.update_rotation(power)
-        self.cueBall.update_physics(-powerDirection)    
-        self.cueBall.update_animation_state(contactDirection)
+        self.cueball.update_rotation(power)
+        self.cueball.update_physics(-powerDirection)    
+        self.cueball.update_animation_state(contactDirection)
         self.powerMeterX = self.powerMeterMinX
         self.ballsMoving = True
         self.isDraggingPowermeter = False
@@ -156,7 +175,7 @@ class Game:
             self.hit_pos = getPointInDir(self.center_pos[0], self.center_pos[1], degree, 63)
 
     def release_hit_pos(self):
-        self.cueBall.hit_pos = (self.center_pos[0]-self.hit_pos[0], self.center_pos[1]- self.hit_pos[1])
+        self.cueball.hit_pos = (self.center_pos[0]-self.hit_pos[0], self.center_pos[1]- self.hit_pos[1])
         self.isDraggingHitpos = False
 
     def ball_movement(self):
@@ -174,13 +193,13 @@ class Game:
             if not self.areBallsMoving():
                 self.ballsMoving = False
                 self.hitPos = self.center_pos
-                self.cueBall.hitPos = (0,0)
+                self.cueball.hitPos = (0,0)
                 self.cuestickPlaced = False
-
-                self.turn_ended()
+                self.end()
         else:
             for ball in self.balls:
                 ball.notMoving()
+            
 
     def areBallsMoving(self):
         for ball in self.balls:
@@ -189,15 +208,8 @@ class Game:
         return False
     
     def wall_collision(self):
-        
-        wall_y = 123
-        wall_height = 258
-        wall_x1 = 105
-        wall_x2 = 432
-        wall_width = 264
-
         for ball in self.balls:
-            if wall_y < ball.pos[1] < wall_y + wall_height:
+            if self.wall_y < ball.pos[1] < self.wall_y + self.wall_height:
                 if ball.pos[0]-ball.radius < self.boundary_x:
                     ball.pos[0] = self.boundary_x + ball.radius
                     ball.collidedWall('vertical_wall')
@@ -206,7 +218,7 @@ class Game:
                     ball.pos[0] = self.boundary_x + self.boundary_width - ball.radius
                     ball.collidedWall('vertical_wall')
                     ball.update_animation_state((ball.contactDir[0] * -1, ball.contactDir[1]))
-            elif (wall_x1 < ball.pos[0]< wall_x1 + wall_width or wall_x2 < ball.pos[0]< wall_x2 + wall_width):
+            elif (self.wall_x1 < ball.pos[0]< self.wall_x1 + self.wall_width or self.wall_x2 < ball.pos[0]< self.wall_x2 + self.wall_width):
                 if ball.pos[1]-ball.radius < self.boundary_y:
                     ball.pos[1] = self.boundary_y + ball.radius
                     ball.collidedWall('horizontal_wall')
@@ -221,7 +233,9 @@ class Game:
               ball.pos[1] > self.boundary_y + self.boundary_height + ball.radius)):    
                 
                 if ball.type == 'cueball':
-                    self.player_scratched()
+                    self.scratched()
+                    self.cueball = Ball(0, np.array([self.cueballStartX, self.table_cy]))
+                    self.balls.append(self.cueball)
                 elif ball.type == '8ball':
                     self.eight_ball_in()
                 elif self.any_balls_in == False:
@@ -236,27 +250,25 @@ class Game:
                 if ball1 != ball2:
                     dist = distance(ball1.pos[0], ball1.pos[1], ball2.pos[0], ball2.pos[1])
                     if dist <= ball1.radius + ball2.radius:
+                        self.has_player_hit_ball(ball1, ball2)
                         ball1.update_animation_state((ball1.contactDir[0], ball1.contactDir[1] * -1))
                         ball2.update_animation_state((ball1.contactDir[0], ball1.contactDir[1] * -1))
                         ball1.collidedBall(ball2)
 
 
     def ball_in_pocket(self, ball):
-        #if ball in pocket is not players ball
-        #check if first ball hit is hte palyers
         for player in self.player_balls:
             player_balls = self.player_balls[player]
             if ball in player_balls:
                 player_balls.remove(ball)
-            print(len(player_balls))
 
-    def player_scratched(self):
-        pass
+    def scratched(self):
+        print('scratched')
+        self.playerScratched = True
 
     def eight_ball_in(self):
         if self.player_balls[self.current_turn] == []:
-            #current player won
-            pass
+            print(f'{self.current_turn} won')
         else:
             print('game end')
 
@@ -269,5 +281,31 @@ class Game:
             self.player_balls[self.current_turn] = self.stripe_balls
             self.player_balls[self.waiting] = self.solid_balls
 
-    def turn_ended(self):
+    def has_player_hit_ball(self, ball1, ball2):
+        if ball1.type == 'cueball' and self.hitBall == False:
+            self.hitBall = True
+            if (self.any_balls_in and ball2.type != self.player_balls[self.current_turn][0].type) or ball2.type == '8ball':
+                self.scratched()
+
+    def placing_cueball(self, mouseX, mouseY):
+        self.cueball.pos = np.array([mouseX, mouseY])
+        if mouseX-self.cueball.radius < self.cueballStartX: 
+            self.cueball.pos[0] = self.cueballStartX
+        elif mouseX+self.cueball.radius >  self.boundary_x + self.boundary_width:
+            self.cueball.pos[0] =  self.boundary_x + self.boundary_width - self.cueball.radius
+        if mouseY < self.boundary_y:
+            self.cueball.pos[1] = self.boundary_y + self.cueball.radius
+        elif mouseY+self.cueball.radius > self.boundary_y + self.boundary_height:
+            self.cueball.pos[1] = self.boundary_y + self.boundary_height - self.cueball.radius
+            
+    def cueball_placed(self):
+        self.playerScratched = False
+
+    def end(self):
+        if self.hitBall == False:
+            self.scratched()
+        else:
+            self.hitBall = False
         self.current_turn, self.waiting = self.waiting, self.current_turn
+        self.turn_ended = True
+

@@ -79,7 +79,7 @@ class Ball():
     def update_animation_state(self, contactDir):
         self.contactDir = contactDir
         x, y = contactDir[0], contactDir[1]
-        if -0.05 < x < 0.05 and (y < 0 or y > 0):
+        if -0.5 < x < 0.05 and (y < 0 or y > 0):
             self.animationState = 'vertical'
         elif -0.05 < y < 0.05 and (x < 0 or x > 0):
             self.animationState = 'horizontal'
@@ -87,17 +87,21 @@ class Ball():
             self.animationState = 'diagonal_right'
         elif (x > 0 and y > 0) or (x<0 and y < 0):
             self.animationState = 'diagonal_left'
+        else:
+            print(x, y)
+
 
     def nextSprite(self):
-        if self.count == self.frameDelay: 
-            animation_sprites = self.animation_sprites.get(self.animationState)
-            if self.index == len(animation_sprites)-1:
-                self.index = 0
-            else:
-                self.index += 1
-            self.currSprite = animation_sprites[self.index]
-            self.frameDelay += 4
-        self.count += 1
+        if self.in_motion:
+            if self.count == self.frameDelay: 
+                animation_sprites = self.animation_sprites.get(self.animationState)
+                if self.index == len(animation_sprites)-1:
+                    self.index = 0
+                else:
+                    self.index += 1
+                self.currSprite = animation_sprites[self.index]
+                self.frameDelay += 4
+            self.count += 1
 
     def notMoving(self):
         self.currSprite = self.main_sprite
