@@ -44,39 +44,58 @@ class Ball():
         self.currSprite = self.main_sprite
         self.animationState = None
         self.index = 0
-        self.frameDelay = 1
         self.count = 0
-        
+        self.frameDelay = 1
+
         self.pos = pos
         self.rotation = 0
-        self.hit_pos = (0, 0)
+        self.hitpos = (0, 0)
         self.contactDir = np.array([0, 0])
-        self.v = np.array([0,0], dtype=float)
+        self.v = np.array([0.0,0.0])
   
         self.in_motion = False
+        self.is_in_pocket = False
 
-    def update_rotation(self, power):
-        torque = (self.hit_pos[0] * self.hit_pos[1]) * power
+    def __lt__(self, other):
+        return (self.num < other.num)
+    
+    def drawStaticBall(self, player):
+        num = self.num%8
+
+        if self.is_in_pocket:
+            sprite_opacity = 10
+        else:
+            sprite_opacity = 100
+
+        if player == 'Player 2':
+            offset = 580
+        else:
+            offset = 55
+
+        drawImage(self.main_sprite, 30*num+offset, 58, opacity=sprite_opacity)
+
+    def updateRotation(self, power):
+        torque = (self.hitpos[0] * self.hitpos[1]) * power
         self.rotation += torque * .01
     
-    def update_physics(self, v):
+    def updatePhysics(self, v):
         self.v = v
 
-    def apply_physics(self, dt):
+    def applyPhysics(self, dt):
         if abs(self.v[0]) > self.stop_threshold or abs(self.v[1]) > self.stop_threshold:
             self.in_motion = True
-            self.pos = self.pos + (self.v*dt)
+            self.pos = self.pos + (self.v * dt)
         else:
             self.in_motion = False
             self.v = np.array([0,0])
 
-    def apply_friction(self):
+    def applyFriction(self):
         self.v = self.v * self.friction_coefficient
 
-    def apply_rotation(self):
+    def applyRotation(self):
         self.rotation *= .9
 
-    def update_animation_state(self, contactDir):
+    def updateAnimationState(self, contactDir):
         self.contactDir = contactDir
         x, y = contactDir[0], contactDir[1]
         if -0.5 < x < 0.05 and (y < 0 or y > 0):
@@ -88,8 +107,7 @@ class Ball():
         elif (x > 0 and y > 0) or (x<0 and y < 0):
             self.animationState = 'diagonal_left'
         else:
-            print(x, y)
-
+            self.animationState = 'horizontal'
 
     def nextSprite(self):
         if self.in_motion:
@@ -108,32 +126,50 @@ class Ball():
 
     def collidedWall(self, collision_type):
         self.rotation *= 1.1
-        if collision_type == 'vertical_wall':
+        if collision_type == 'left' or collision_type == 'right' :
             self.v[0] *= -.8
-        elif collision_type == 'horizontal_wall':
+            self.updateAnimationState((self.contactDir[0] * -1, self.contactDir[1]))
+        elif collision_type == 'top' or collision_type == 'bottom':
             self.v[1] *= -.8
+            self.updateAnimationState((self.contactDir[0], self.contactDir[1] * -1))
 
-    def collidedBall(self, other):
-        contact_angle = np.arctan2(self.pos[1]-other.pos[1], self.pos[0]-other.pos[0])
+    def collidedBall(self, other, dist):
+        impactVector = np.subtract(other.pos, self.pos)
+        
+        overlap = dist - (self.radius + other.radius)
+        direction = impactVector / np.linalg.norm(impactVector) * (overlap * 0.5)
+        self.pos += direction
+        other.pos -= direction
 
-        rotation_matrix = np.array([[np.cos(contact_angle), np.sin(contact_angle)], 
-                                    [-np.sin(contact_angle), np.cos(contact_angle)]])
+        dist = self.radius + other.radius
+        impactVector = impactVector / np.linalg.norm(impactVector) * dist
+        velocityVector = np.subtract(other.v, self.v)
 
-        inverse_rotation_matrix = np.array([[np.cos(contact_angle), -np.sin(contact_angle)],
-                                           [np.sin(contact_angle), np.cos(contact_angle)]])
+        num = np.dot(velocityVector, impactVector)
+        den = dist * dist
 
-        self.v = self.v @ rotation_matrix
-        other.v = other.v @ rotation_matrix
+        delta_v = np.dot(impactVector, num/den)
 
-        self.v[0], other.v[0] = other.v[0], self.v[0]
+        self.v += delta_v
+        other.v += -delta_v
 
-        self.v = self.v @ inverse_rotation_matrix
-        other.v = other.v @ inverse_rotation_matrix
+    def inPocket(self, pocket):
+        self.is_in_pocket = True
+        center = np.array([(pocket.wall_start[0]+pocket.wall_end[0])/2, (pocket.wall_start[1]+pocket.wall_end[1])/2])
+        if pocket.type == 'top_left':
+            center = center + np.array([-25, -25])
+        elif pocket.type == 'top_middle':
+            center = center + np.array([0, -25])
+        elif pocket.type == 'top_right':
+            center = center + np.array([25, -25])
+        elif pocket.type == 'bottom_left':
+            center = center + np.array([-25, 25])
+        elif pocket.type == 'bottom_middle':
+            center = center + np.array([0, 25])
+        elif pocket.type == 'bottom_right':
+            center = center + np.array([25, 25])
 
-        dist = distance(self.pos[0], self.pos[1], other.pos[0], other.pos[1])
-        overlap = 2 * self.radius - dist
-        if overlap > 0:
-            correction = overlap / 2
-            direction = (other.pos - self.pos) / dist  
-            self.pos -= correction * direction
-            other.pos += correction * direction
+        direction = center-self.pos
+        self.v = direction / np.linalg.norm(direction) * 75
+
+    
