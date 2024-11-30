@@ -33,7 +33,7 @@ def onAppStart(app):
                    'return_to_menu_button': Button('return to menu', app.cx, 375, 325, 250, 325, 575)}
     
 
-    app.game = Game()
+    app.game = Game(app.aim_assistance_on)
     
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill=app.background_color)
