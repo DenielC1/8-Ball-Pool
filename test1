@@ -1,0 +1,91 @@
+import pygame
+import math
+
+# Constants
+TABLE_WIDTH = 800
+TABLE_HEIGHT = 400
+BALL_RADIUS = 10
+
+def find_intersection(start_x, start_y, angle, balls):
+    # Direction vector from the angle
+    direction_x = math.cos(angle)
+    direction_y = math.sin(angle)
+
+    # Initialize variables to track the closest point
+    min_distance = float('inf')
+    end_x, end_y = None, None
+
+    # Check intersections with table walls
+    if direction_x != 0:  # Prevent division by zero
+        t_x_left = -start_x / direction_x
+        t_x_right = (TABLE_WIDTH - start_x) / direction_x
+        if 0 <= t_x_left < min_distance:
+            min_distance = t_x_left
+            end_x, end_y = 0, start_y + t_x_left * direction_y
+        if 0 <= t_x_right < min_distance:
+            min_distance = t_x_right
+            end_x, end_y = TABLE_WIDTH, start_y + t_x_right * direction_y
+
+    if direction_y != 0:
+        t_y_top = -start_y / direction_y
+        t_y_bottom = (TABLE_HEIGHT - start_y) / direction_y
+        if 0 <= t_y_top < min_distance:
+            min_distance = t_y_top
+            end_x, end_y = start_x + t_y_top * direction_x, 0
+        if 0 <= t_y_bottom < min_distance:
+            min_distance = t_y_bottom
+            end_x, end_y = start_x + t_y_bottom * direction_x, TABLE_HEIGHT
+
+    # Check intersections with balls
+    for ball in balls:
+        ball_x, ball_y = ball
+        dx, dy = ball_x - start_x, ball_y - start_y
+        a = 1  # cos² + sin² = 1
+        b = 2 * (direction_x * dx + direction_y * dy)
+        c = dx**2 + dy**2 - BALL_RADIUS**2
+        discriminant = b**2 - 4 * a * c
+
+        if discriminant >= 0:  # Check if there's a collision
+            t1 = (-b - math.sqrt(discriminant)) / (2 * a)
+            if 0 <= t1 < min_distance:
+                min_distance = t1
+                end_x, end_y = start_x + t1 * direction_x, start_y + t1 * direction_y
+
+    return end_x, end_y
+
+# Pygame setup
+pygame.init()
+screen = pygame.display.set_mode((TABLE_WIDTH, TABLE_HEIGHT))
+clock = pygame.time.Clock()
+
+# Initial positions
+cue_ball = (400, 200)  # Cue ball's starting position
+balls = [(600, 200)]   # Other balls on the table
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Get mouse position for cue stick angle
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    angle = math.atan2(mouse_y - cue_ball[1], mouse_x - cue_ball[0])
+
+    # Find the intersection point
+    end_x, end_y = find_intersection(cue_ball[0], cue_ball[1], angle, balls)
+
+    # Drawing
+    screen.fill((0, 128, 0))  # Green pool table
+    pygame.draw.circle(screen, (255, 255, 255), cue_ball, BALL_RADIUS)  # Cue ball
+    for ball in balls:
+        pygame.draw.circle(screen, (255, 0, 0), ball, BALL_RADIUS)  # Other balls
+
+    # Draw aim line
+    if end_x is not None and end_y is not None:
+        pygame.draw.line(screen, (255, 255, 0), cue_ball, (end_x, end_y), 2)
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
