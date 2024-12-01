@@ -6,6 +6,7 @@ Resources
 - https://www.1001fonts.com/edit-undo-font.html
 
 - https://en.wikipedia.org/wiki/Elastic_collision
-- https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
 - https://www.youtube.com/watch?v=dJNFPv9Mj-Y
+- https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
+- https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
 

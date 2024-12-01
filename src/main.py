@@ -198,7 +198,7 @@ def onKeyPress(app, key):
         takeStep(app)
 
 def resetGame(app):
-    app.game = Game()
+    app.game = Game(app.aim_assistance_on)
 
 def main():
     runApp(width=WIDTH, height=HEIGHT)

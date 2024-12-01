@@ -88,6 +88,8 @@ class Game:
         self.player_scratched = True
         self.no_balls_in = True
 
+        self.found_collision = False
+
         self.player_blinking_timer = 0
         self.cueball_blinking_timer = 0
         self.cueball_blinking_timer = 0
@@ -112,13 +114,13 @@ class Game:
                 drawImage(ball.currSprite, int(x)-12, int(y)-12, rotateAngle=ball.rotation)
 
         if not self.end_of_turn and not self.balls_moving and not self.player_scratched:
-                drawImage('graphics/cue stick.png', int(self.cueball.pos[0])-250, int(self.cueball.pos[1])-6, rotateAngle=-self.cuestick_angle)
+            drawImage('graphics/cue stick.png', int(self.cueball.pos[0])-250, int(self.cueball.pos[1])-6, rotateAngle=-self.cuestick_angle)
+            if self.aim_assistance_on:
+                self.drawBallPath()
 
         drawImage('graphics/other.png', self.table_cx, self.other_cy, align='center')
         drawImage('graphics/spin_selector.png', self.hitpos[0], self.hitpos[1])
 
-        if self.aim_assistance_on:
-            self.drawBallPath()
 
         self.drawScoreboard()
         self.drawPowerMeter()
@@ -169,7 +171,75 @@ class Game:
         drawImage('graphics/powermeter/cue ball.png', 316, 644, align='left')
 
     def drawBallPath(self):
-        pass
+        temp_distance = 1000        
+        direction = np.array([np.cos(np.radians(180-self.cuestick_angle)), np.sin(np.radians(180-self.cuestick_angle))]) 
+        direction = direction * temp_distance
+
+        x1, y1 = int(self.cueball.pos[0]), int(self.cueball.pos[1])
+        x2, y2 = x1 + int(direction[0]), y1 + int(direction[1])
+
+        closest_t = 2
+        for ball in self.balls:
+            if ball.type != 'cueball':
+                cx, cy = ball.pos[0], ball.pos[1]  
+                r = self.cueball.radius + ball.radius 
+
+                dx, dy = x2 - x1, y2 - y1
+                cdx, cdy = x1 - cx, y1 - cy
+
+                a = dx**2 + dy**2
+                b = 2 * (cdx * dx + cdy * dy)
+                c = cdx**2 + cdy**2 - r**2
+
+                discriminant = b**2 - 4 * a * c
+                if discriminant >= 0: 
+                    sqrt_discriminant = discriminant**0.5
+                    t1 = (-b - sqrt_discriminant) / (2 * a)
+                    t2 = (-b + sqrt_discriminant) / (2 * a)
+
+                    for t in (t1, t2):
+                        if 0 <= t <= 1:
+                            if t < closest_t:
+                                closest_t = t
+        if closest_t != 2:
+            self.found_collision = True
+                             
+            new_x, new_y = int(x1 + closest_t * dx), int(y1 + closest_t * dy)
+
+            drawLine(x1, y1, new_x, new_y, fill='white')
+            drawImage('graphics/ball_location.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
+        else:
+            self.found_collision = False
+
+        if not self.found_collision:
+            for wall in self.collidables:
+                offset_x = 0
+                offset_y = 0
+
+                if wall.type == 'top':
+                    offset_y = self.cueball.radius
+                elif wall.type == 'bottom':
+                    offset_y = -self.cueball.radius
+                elif wall.type == 'left':
+                    offset_x = self.cueball.radius
+                elif wall.type == 'right':
+                    offset_x = -self.cueball.radius
+
+                x3, y3 = wall.wall_start[0] + offset_x, wall.wall_start[1] + offset_y
+                x4, y4 = wall.wall_end[0] + offset_x, wall.wall_end[1] + offset_y
+
+                den = (x1-x2) * (y3-y4) - (y1-y2) * (x3-x4)
+
+                if den != 0:
+                    t = ((x1-x3) * (y3-y4) - (y1-y3) * (x3-x4)) / den
+                    u = - ((x1-x2) * (y1-y3) - (y1-y2) * (x1-x3)) / den
+
+                    if 0<=t<=1 and 0<=u<=1:
+                        new_x, new_y = int(x1 + t * (x2-x1)), int(y1 + t *(y2-y1))
+
+                        drawLine(x1, y1, new_x, new_y, fill='white')
+                        drawImage('graphics/ball_location.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
+
 
     def drawAnimations(self):
         if not self.game_over:

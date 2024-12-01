@@ -14,13 +14,11 @@ class Wall:
         ball_vector = np.array(ball_pos) - np.array(self.wall_start)
 
         t = np.dot(ball_vector, wall_vector) / np.dot(wall_vector, wall_vector)
-        t = max(0, min(1, t)) 
 
-        closest_point = np.array(self.wall_start) + t * wall_vector
-
-        distance = np.linalg.norm(np.array(ball_pos) - closest_point)
-
-        return distance <= ball_radius
+        if 0 <= t <= 1:
+            closest_point = np.array(self.wall_start) + t * wall_vector
+            distance = np.linalg.norm(np.array(ball_pos) - closest_point)
+            return distance <= ball_radius
     
     def fixBallPosition(self, ball_pos):
         if self.type == 'right':
