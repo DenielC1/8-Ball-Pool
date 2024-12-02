@@ -15,15 +15,15 @@ def onAppStart(app):
     app.font_style = 'Edit Undo BRK'
     app.heading_size = 80
 
-    app.on_base_menu = False
+    app.on_base_menu = True
     app.on_selection_menu = False
     app.on_settings_menu = False
 
-    app.game_started = True
+    app.game_started = False
 
     app.volume_changed = False
 
-    app.aim_assistance_on = True
+    app.assisted_path_on = False
 
     app.buttons = {'new_game_button' : Button('new game', app.cx, 325, 150, 50, 375, 525),
                    'settings_button' : Button('settings', app.cx, 375, 140, 50, 380, 520),
@@ -40,8 +40,10 @@ def onAppStart(app):
     app.sliders = {'master_volume_slider' : Slider('master volume', app.cx, 300, 350, 25, 122),
                    'background_volume_slider' : Slider('background volume', app.cx, 360, 350, 25, 156),
                    'sound_fx_volume_slider' : Slider('sound fx volume', app.cx, 420, 350, 25, 138)}
+    
+    app.toggles = {'assisted_path_toggle' : Toggle('assisted path', app.cx, 460, 350, 30, 112)} 
 
-    app.game = Game(app.aim_assistance_on)
+    app.game = Game()
     
     app.volume = {'master_volume_slider' : 1,
                   'background_volume_slider' : 1,
@@ -62,6 +64,11 @@ def redrawAll(app):
     else: 
         app.game.drawGame()
 
+
+        if not app.game.end_of_turn and not app.game.balls_moving and not app.game.player_scratched and not app.game.selecting_pocket:
+            if app.assisted_path_on:
+                app.game.drawBallPath()
+
         if app.paused:
             drawRect(0, 0, app.width, app.height, opacity=50)
             if app.on_settings_menu:
@@ -73,7 +80,7 @@ def redrawAll(app):
             drawGameOverMenu(app)
 
 def drawBaseMenu(app):
-    drawLabel("Billards", app.cx, 200, font=app.font_style, size=app.heading_size)
+    drawLabel("8 Ball Pool", app.cx, 200, font=app.font_style, size=app.heading_size)
     drawLine(210, 240, 680, 240)
 
     app.buttons['new_game_button'].draw()
@@ -98,6 +105,9 @@ def drawSettingsMenu(app):
 
     for name in app.sliders:
         app.sliders[name].draw()
+
+    for name in app.toggles:
+        app.toggles[name].draw()
 
 def drawGameOverMenu(app):
     text = app.game.getWinner()
@@ -126,6 +136,11 @@ def settings_menu_click(app):
         for name in app.sliders:
             if app.sliders[name].is_hovering:
                 app.sliders[name].click()
+        
+        if app.toggles['assisted_path_toggle'].is_hovering:
+            app.toggles['assisted_path_toggle'].click()
+            app.assisted_path_on = not app.assisted_path_on
+
 
 def onStep(app):
     if not app.paused and not app.game.game_over:
@@ -150,6 +165,10 @@ def onMouseMove(app, mouseX, mouseY):
 
     for name in app.sliders:
         app.sliders[name].onHover(mouseX, mouseY)
+
+    for name in app.toggles:
+        app.toggles[name].onHover(mouseX, mouseY)
+
 
     if app.game_started and not app.paused:
         if app.game.balls_moving == False:
@@ -259,6 +278,7 @@ def onMouseRelease(app, mouseX, mouseY):
             app.volume[name] = app.sliders[name].getVolumeLevel()
             app.volume_changed = True
 
+    
     if app.game_started:
         if app.game.is_dragging_powermeter:
             app.game.releasePowermeter()
@@ -276,10 +296,13 @@ def onKeyPress(app, key):
         takeStep(app)
     if app.game_started:
         if key == 'escape':
-            app.paused = not app.paused
+            if app.paused and app.on_settings_menu:
+                app.on_settings_menu = False
+            else:
+                app.paused = not app.paused
 
 def resetGame(app):
-    app.game = Game(app.aim_assistance_on)
+    app.game = Game()
 
 def main():
     runApp(width=WIDTH, height=HEIGHT)

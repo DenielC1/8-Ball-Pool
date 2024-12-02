@@ -30,7 +30,7 @@ class Button:
             drawLine(self.line_x1, self.y+self.button_height, self.line_x2, self.y+self.button_height)
 
         #debug
-        #drawRect(self.x, self.y+self.button_height/2, self.button_width, self.button_height, opacity=50, align='center') 
+        #drawRect(self.x, self.y+self.button_height/2, self.button_width, self.button_height, opacity=50, align='center')
 
     def onHover(self, mouseX, mouseY):
         if (self.x - self.button_width/2 < mouseX < self.x + self.button_width/2 and 
@@ -85,3 +85,34 @@ class Slider(Button):
     def getVolumeLevel(self):
         volume_level = (self.max_x-self.offset-self.min_x)/(self.max_x-self.min_x)
         return volume_level
+    
+class Toggle(Button):
+    def __init__(self, text, x, y , width, height, lineWidth):
+        super().__init__(text, x, y, width, height, x-width/2, x-width/2+lineWidth)
+        self.select_x = self.x+self.button_width/2 - height/2
+        self.select_width = self.button_height - 5
+        self.select_height = self.button_height - 5
+
+        self.active = False
+
+    def draw(self):
+        drawLabel(self.text, self.x-self.button_width/2+10, self.y, font=self.font_style, align='left', size=18)
+        drawRect(self.x, self.y, self.button_width, self.button_height, opacity=40, align='center')
+        drawRect(self.select_x, self.y, self.select_width, self.select_height, align='center', opacity=30, border='black')
+
+        if self.active:
+            drawLine(self.select_x-10, self.y, self.select_x, self.y+10)
+            drawLine(self.select_x, self.y+10, self.select_x+17, self.y-10)
+
+    def onHover(self, mouseX, mouseY):
+        if (self.select_x - self.select_width/2 < mouseX < self.select_x + self.select_width/2 and
+            self.y-self.select_height/2 < mouseY < self.y + self.select_height/2):
+            self.is_hovering = True
+        else:
+            self.is_hovering = False
+
+    def click(self):
+        self.active = not self.active
+        self.is_clicked = True
+        self.sound_fx['click_sound'].play()
+

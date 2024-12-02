@@ -68,7 +68,7 @@ class Game:
     boundary_width = 654
     boundary_height = 318
 
-    def __init__ (self, aim_assistance_on):
+    def __init__ (self):
 
         self.player_balls = {'Player 1':[],
                              'Player 2':[]}
@@ -89,9 +89,6 @@ class Game:
 
         self.center_pos = (171, 615)
         self.hitpos = self.center_pos
-
-        #game settings...
-        self.aim_assistance_on = aim_assistance_on
 
         self.cuestick_placed = False        
         self.is_dragging_powermeter = False
@@ -139,9 +136,6 @@ class Game:
 
         if not self.end_of_turn and not self.balls_moving and not self.player_scratched and not self.selecting_pocket:
             drawImage('graphics/cue stick.png', int(self.cueball.pos[0])-250, int(self.cueball.pos[1])-6, rotateAngle=-self.cuestick_angle)
-            if self.aim_assistance_on:
-                self.drawBallPath()
-
 
         drawImage('graphics/other.png', self.table_cx, self.other_cy, align='center')
         drawImage('graphics/spin_selector.png', self.hitpos[0], self.hitpos[1])
