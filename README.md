@@ -11,5 +11,5 @@ Resources
 - https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
 - https://en.wikipedia.org/wiki/Rotation_matrix
 
--https://bbunker.itch.io/8-bit-music-anthology-nes-edition
--https://hunteraudio.itch.io/8bit-sfx-and-music-pack
+- https://bbunker.itch.io/8-bit-music-anthology-nes-edition
+- https://hunteraudio.itch.io/8bit-sfx-and-music-pack
