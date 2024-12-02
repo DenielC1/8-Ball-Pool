@@ -52,9 +52,12 @@ class Ball():
         self.hitpos = (0, 0)
         self.contactDir = np.array([0, 0])
         self.v = np.array([0.0,0.0])
+        self.contactPoint = None
   
         self.in_motion = False
+        self.near_pocket = False
         self.is_in_pocket = False
+        self.pocket = None
 
     def __lt__(self, other):
         return (self.num < other.num)
@@ -130,8 +133,24 @@ class Ball():
             self.v[0] *= -.8
             self.updateAnimationState((self.contactDir[0] * -1, self.contactDir[1]))
         elif collision_type == 'top' or collision_type == 'bottom':
-            self.v[1] *= -.8
+            self.v[1] *= - .8
             self.updateAnimationState((self.contactDir[0], self.contactDir[1] * -1))
+        elif collision_type == 'diagonal':
+            contact_angle = np.arctan2(self.pos[1]-self.contactPoint[1], self.pos[0]-self.contactPoint[0])
+            rotation_matrix = np.array([[np.cos(contact_angle), np.sin(contact_angle)], 
+                                        [-np.sin(contact_angle), np.cos(contact_angle)]])
+            inverse_rotation_matrix = np.array([[np.cos(contact_angle), -np.sin(contact_angle)],
+                                            [np.sin(contact_angle), np.cos(contact_angle)]])
+            
+            self.v = self.v @ rotation_matrix
+
+            self.v *= -.8
+
+            self.v = self.v @ inverse_rotation_matrix
+
+
+
+
 
     def collidedBall(self, other, dist):
         impactVector = np.subtract(other.pos, self.pos)
@@ -153,23 +172,35 @@ class Ball():
         self.v += delta_v
         other.v += -delta_v
 
+    def nearPocket(self):
+        self.near_pocket = True
+
     def inPocket(self, pocket):
         self.is_in_pocket = True
-        center = np.array([(pocket.wall_start[0]+pocket.wall_end[0])/2, (pocket.wall_start[1]+pocket.wall_end[1])/2])
-        if pocket.type == 'top_left':
-            center = center + np.array([-25, -25])
-        elif pocket.type == 'top_middle':
-            center = center + np.array([0, -25])
-        elif pocket.type == 'top_right':
-            center = center + np.array([25, -25])
-        elif pocket.type == 'bottom_left':
-            center = center + np.array([-25, 25])
-        elif pocket.type == 'bottom_middle':
-            center = center + np.array([0, 25])
-        elif pocket.type == 'bottom_right':
-            center = center + np.array([25, 25])
-
-        direction = center-self.pos
-        self.v = direction / np.linalg.norm(direction) * 75
-
+        self.pocket = pocket
     
+    def collidePocketWalls(self):
+        if self.pocket != None:
+
+            if self.pocket.check_collision_with_circle(self):
+
+                dx, dy = self.pos[0] - self.pocket.cx, self.pos[1] - self.pocket.cy
+
+                dist = distance(self.pos[0], self.pos[1], self.pocket.cx, self.pocket.cy)
+
+                overlap = (dist + self.radius) - self.pocket.radius
+                if overlap > 0:
+                    self.pos[0] -= (dx/dist) * overlap
+                    self.pos[1] -= (dy/dist) * overlap
+                
+                normal_x = dx / dist
+                normal_y = dy / dist
+
+                normal = np.array([dx/dist, dy/dist])
+
+                velocityVector = np.dot(self.v, normal)
+                
+                self.v[0] -= 2 * velocityVector * normal[0]
+                self.v[1] -= 2 * velocityVector * normal[1]
+
+        

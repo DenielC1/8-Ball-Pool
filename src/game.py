@@ -4,31 +4,52 @@ import numpy as np
 from ball import Ball
 from settings import *
 from wall import Wall
+from pocket import Pocket
 
 class Game:
     font_style = 'Edit Undo BRK'
     
     offset_x = 159
-    offset_y = 139
+    offset_y = 140
+
+    top_y = offset_y
+    bottom_y = offset_y+321
+    left_x = offset_x-38
+    right_x = offset_x-38+657
 
     collidables = [Wall((offset_x, offset_y), (offset_x+258, offset_y), 'top'), 
                 Wall((offset_x+258+66, offset_y), (offset_x+66+2*258, offset_y), 'top'),
                 Wall((offset_x, offset_y+321), (offset_x+258, offset_y+321), 'bottom'),
                 Wall((offset_x+258+66, offset_y+321), (offset_x+66+2*258, offset_y+321), 'bottom'),
                 Wall((offset_x-38, offset_y+37), (offset_x-38, offset_y+37+246), 'left'),
-                Wall((offset_x-38+657, offset_y+37), (offset_x-38+657, offset_y+37+246), 'right')]
+                Wall((offset_x-38+657, offset_y+37), (offset_x-38+657, offset_y+37+246), 'right'),
+                Wall((offset_x, offset_y), (133, 107), 'diagonal'),
+                Wall((offset_x+258, offset_y), (428, 107), 'diagonal'),
+                Wall((offset_x+258+66, offset_y), (474, 107), 'diagonal'),
+                Wall((offset_x+66+2*258, offset_y), (767, 107), 'diagonal'),
+                Wall((offset_x-38+657, offset_y+37), (809, 151), 'diagonal'),
+                Wall((offset_x-38+657, offset_y+37+246), (809, 449), 'diagonal'),
+                Wall((offset_x+66+2*258, offset_y+321), (766, 491), 'diagonal'),
+                Wall((offset_x+258+66, offset_y+321), (472, 495), 'diagonal'),
+                Wall((offset_x+258, offset_y+321), (429, 495), 'diagonal'),
+                Wall((offset_x, offset_y+321), (133, 491), 'diagonal'),
+                Wall((offset_x-38, offset_y+37+246), (88, 453), 'diagonal'),
+                Wall((offset_x-38, offset_y+37), (89, 148), 'diagonal')]
     
-    top_y = offset_y
-    bottom_y = offset_y+321
-    left_x = offset_x-38
-    right_x = offset_x-38+657
-    
-    pockets = [Wall((118, 169), (152, 135), 'top_left'), 
+        
+    pockets_entrance = [Wall((118, 169), (152, 135), 'top_left'), 
                Wall((118+666,169), (82+666, 135), 'top_right'),
                Wall((82+666, 169+294), (118+666, 135+294), 'bottom_right'),
                Wall((152, 169+294), (118, 135+294), 'bottom_left'),
                Wall((offset_x+261, offset_y-3), (offset_x+60+261, offset_y-3), 'top_middle'),
                Wall((offset_x+261, offset_y+324), (offset_x+60+261, offset_y+324), 'bottom_middle')]
+    
+    pockets = [Pocket(116, 133, 28, (-3,-3)),
+            Pocket(116, 465, 28, (-3, 3)),
+            Pocket(785, 133, 28, (3, -3)),
+            Pocket(450, 122, 24, (0, -7)),
+            Pocket(450, 476, 24, (0, 7)),
+            Pocket(785, 465, 28, (3, 3))]
     
     cueball_start_x = WIDTH/2+168
     starting_rack_x = WIDTH/2-168
@@ -43,7 +64,7 @@ class Game:
     power_meter_height = 12
 
     boundary_x = 123
-    boundary_y = 141
+    boundary_y = 140
     boundary_width = 654
     boundary_height = 318
 
@@ -84,6 +105,9 @@ class Game:
         self.end_of_turn = True
         self.game_over =  False
 
+        self.selecting_pocket = False
+        self.selected_pocket = None
+
         self.player_hit_ball = False
         self.player_scratched = True
         self.no_balls_in = True
@@ -104,7 +128,7 @@ class Game:
         for ball in self.balls:
             x, y = ball.pos
             if ball.type == 'cueball' and self.is_placing_cueball:
-                if not self.end_of_turn and not self.balls_moving:
+                if not self.end_of_turn and not self.balls_moving and not self.selecting_pocket:
                     drawImage('graphics/cueball indicator.png', int(x) -12, int(y)-12)
                     if self.cueball_blinking_timer <5:
                         drawImage(ball.currSprite, int(x)-12, int(y)-12, rotateAngle=ball.rotation)
@@ -113,10 +137,11 @@ class Game:
             else:
                 drawImage(ball.currSprite, int(x)-12, int(y)-12, rotateAngle=ball.rotation)
 
-        if not self.end_of_turn and not self.balls_moving and not self.player_scratched:
+        if not self.end_of_turn and not self.balls_moving and not self.player_scratched and not self.selecting_pocket:
             drawImage('graphics/cue stick.png', int(self.cueball.pos[0])-250, int(self.cueball.pos[1])-6, rotateAngle=-self.cuestick_angle)
             if self.aim_assistance_on:
                 self.drawBallPath()
+
 
         drawImage('graphics/other.png', self.table_cx, self.other_cy, align='center')
         drawImage('graphics/spin_selector.png', self.hitpos[0], self.hitpos[1])
@@ -125,20 +150,22 @@ class Game:
         self.drawScoreboard()
         self.drawPowerMeter()
         
+        if not self.no_balls_in and self.ballsLeft(self.current_turn) == 0 and self.selecting_pocket:
+            self.drawPocketSelection()
+        
         if self.end_of_turn:
             self.drawAnimations()
 
-        #debug test
-        # drawLabel(f'Game over: {self.game_over}', self.table_cx, 20)
-        # drawLabel(f'Player hit ball: {self.player_hit_ball}', self.table_cx, 30)
-        # drawLabel(f'Player scratched: {self.player_scratched}', self.table_cx, 40)
-        # drawLabel(f'No balls in: {self.no_balls_in}', self.table_cx, 50)
-        # drawLabel(f'End of turn: {self.end_of_turn}', self.table_cx, 60)
-        #for wall in self.collidables:
-        #   drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
-        #for wall in self.pockets:
-        #    drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
-        #drawRect(self.boundary_x, self.boundary_y, self.boundary_width, self.boundary_height, fill='red', opacity= 20)
+        # for wall in self.collidables:
+        #     drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
+        # # for wall in self.pockets:
+        # #    drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
+        # for wall in self.pockets_entrance:
+        #     drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
+
+        # drawRect(self.boundary_x, self.boundary_y, self.boundary_width, self.boundary_height, fill='red', opacity= 20)
+
+        
 
     def drawScoreboard(self):
         if self.current_turn == 'Player 1':
@@ -178,6 +205,7 @@ class Game:
         x1, y1 = int(self.cueball.pos[0]), int(self.cueball.pos[1])
         x2, y2 = x1 + int(direction[0]), y1 + int(direction[1])
 
+
         closest_t = 2
         for ball in self.balls:
             if ball.type != 'cueball':
@@ -210,35 +238,75 @@ class Game:
             drawImage('graphics/ball_location.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
         else:
             self.found_collision = False
-
+        
         if not self.found_collision:
             for wall in self.collidables:
-                offset_x = 0
-                offset_y = 0
+                if wall.type != 'top_middle' and wall.type != 'top_bottom':
+                    offset_x = 0
+                    offset_y = 0
 
-                if wall.type == 'top':
-                    offset_y = self.cueball.radius
-                elif wall.type == 'bottom':
-                    offset_y = -self.cueball.radius
-                elif wall.type == 'left':
-                    offset_x = self.cueball.radius
-                elif wall.type == 'right':
-                    offset_x = -self.cueball.radius
+                    if wall.type == 'top':
+                        offset_y = self.cueball.radius
+                    elif wall.type == 'bottom':
+                        offset_y = -self.cueball.radius
+                    elif wall.type == 'left':
+                        offset_x = self.cueball.radius
+                    elif wall.type == 'right':
+                        offset_x = -self.cueball.radius
 
-                x3, y3 = wall.wall_start[0] + offset_x, wall.wall_start[1] + offset_y
-                x4, y4 = wall.wall_end[0] + offset_x, wall.wall_end[1] + offset_y
+                    x3, y3 = wall.wall_start[0] + offset_x, wall.wall_start[1] + offset_y
+                    x4, y4 = wall.wall_end[0] + offset_x, wall.wall_end[1] + offset_y
 
-                den = (x1-x2) * (y3-y4) - (y1-y2) * (x3-x4)
+                    den = (x1-x2) * (y3-y4) - (y1-y2) * (x3-x4)
 
-                if den != 0:
-                    t = ((x1-x3) * (y3-y4) - (y1-y3) * (x3-x4)) / den
-                    u = - ((x1-x2) * (y1-y3) - (y1-y2) * (x1-x3)) / den
+                    if den != 0:
+                        t = ((x1-x3) * (y3-y4) - (y1-y3) * (x3-x4)) / den
+                        u = - ((x1-x2) * (y1-y3) - (y1-y2) * (x1-x3)) / den
 
-                    if 0<=t<=1 and 0<=u<=1:
-                        new_x, new_y = int(x1 + t * (x2-x1)), int(y1 + t *(y2-y1))
+                        if 0<=t<=1 and 0<=u<=1:
+                            new_x, new_y = int(x1 + t * (x2-x1)), int(y1 + t *(y2-y1))
+                            self.found_collision = True
+                            drawLine(x1, y1, new_x, new_y, fill='white')
+                            drawImage('graphics/ball_location.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
+                            break
+            
+        if not self.found_collision:
+                furthest_t = -1
+                for pocket in self.pockets:
+                    cx, cy = pocket.cx, pocket.cy  
+                    r = self.cueball.radius + pocket.radius
 
-                        drawLine(x1, y1, new_x, new_y, fill='white')
-                        drawImage('graphics/ball_location.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
+                    dx, dy = x2 - x1, y2 - y1 
+                    cdx, cdy = x1 - cx, y1 - cy
+
+                    a = dx**2 + dy**2
+                    b = 2 * (cdx * dx + cdy * dy)
+                    c = cdx**2 + cdy**2 - r**2
+
+                    discriminant = b**2 - 4 * a * c
+                    if discriminant >= 0: 
+                        sqrt_discriminant = discriminant**0.5
+                        t1 = (-b - sqrt_discriminant) / (2 * a)
+                        t2 = (-b + sqrt_discriminant) / (2 * a)
+
+                        for t in (t1, t2):
+                            if 0 <= t <= 1:
+                                if t > furthest_t:
+                                    furthest_t = t
+                if furthest_t != -1:
+                    self.found_collision = True
+                                    
+                    new_x, new_y = int(x1 + furthest_t * dx), int(y1 + furthest_t * dy)
+
+                    drawLine(x1, y1, new_x, new_y, fill='white')
+                    drawImage('graphics/ball_location.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
+                else:
+                    self.found_collision = False
+    
+    def drawPocketSelection(self):
+        drawLabel('Select a pocket', self.table_cx,75, font=self.font_style, size=24)
+        for pocket in self.pockets:
+            drawCircle(pocket.cx, pocket.cy, pocket.radius, fill=None, opacity=70, border='white', borderWidth=4)
 
 
     def drawAnimations(self):
@@ -320,7 +388,7 @@ class Game:
 
     def releasePowermeter(self):
         contactDirection = np.array([np.cos(np.radians(-self.cuestick_angle)), np.sin(np.radians(-self.cuestick_angle))])
-        power = (self.power_meter_x-self.power_meter_min_x)/(self.power_meter_max_x-self.power_meter_min_x)* 3000
+        power = (self.power_meter_x-self.power_meter_min_x)/(self.power_meter_max_x-self.power_meter_min_x)* 2500
         powerDirection = power * contactDirection 
         #÷print(f'Power: {powerDirection}')
 
@@ -374,36 +442,45 @@ class Game:
     def releaseCueball(self):
         self.is_dragging_cueball = False
 
+    def clickedPocket(self, mouseX, mouseY):
+        for pocket in self.pockets:
+            dist = distance(pocket.cx, pocket.cy, mouseX, mouseY)
+            if dist <= pocket.radius:
+                self.selected_pocket = pocket
+                self.selecting_pocket = False
+                print('selected pocket')
+
     def run(self):
         if not self.end_of_turn:
-            if self.balls_moving:
-                for ball in self.balls:
-                    ball.applyPhysics(1/FPS)
-                    ball.applyFriction()
+            if not self.selecting_pocket:
+                if self.balls_moving:
+                    for ball in self.balls:
+                        ball.applyPhysics(1/FPS)
+                        ball.applyFriction()
 
-                    self.ballCollision()
-                    self.wallCollision()
-                    self.pocketCollision()
+                        self.ballCollision()
+                        self.wallCollision()
+                        self.pocketCollision()
 
-                    if ball.is_in_pocket and not ball.in_motion:
-                        if ball.type == 'cueball':
-                            self.drawNewCueball()
-                        self.balls.remove(ball)
+                        if ball.is_in_pocket and not ball.in_motion:
+                            if ball.type == 'cueball':
+                                self.drawNewCueball()
+                            self.balls.remove(ball)
 
-                    if ball.in_motion:
-                        ball.nextSprite() 
-                        
-                if not self.areBallsMoving():
-                    self.balls_moving = False
-                    self.hitPos = self.center_pos
-                    self.cueball.hitPos = (0,0)
-                    self.cuestick_placed = False
+                        if ball.in_motion:
+                            ball.nextSprite() 
+                            
+                    if not self.areBallsMoving():
+                        self.balls_moving = False
+                        self.hitPos = self.center_pos
+                        self.cueball.hitPos = (0,0)
+                        self.cuestick_placed = False
 
-                    self.end()
+                        self.end()
 
-            else:
-                for ball in self.balls:
-                    ball.notMoving()
+                else:
+                    for ball in self.balls:
+                        ball.notMoving()
         self.animate()
             
     def areBallsMoving(self):
@@ -417,15 +494,15 @@ class Game:
             if ball.in_motion:
                 ball.pos = self.updatedBallPos(ball)
                 for wall in self.collidables:
-                    if wall.checkCollision(ball.pos, ball.radius):
-                        ball.pos = wall.fixBallPosition(ball.pos)
+                    if wall.checkCollision(ball):
+                        wall.fixBallPosition(ball)
                         ball.collidedWall(wall.type)
 
     def updatedBallPos(self, ball):
-        if (ball.pos[0] > 486 or ball.pos[0] < 420) or ball.is_in_pocket:
+        if (ball.pos[0] > 486 or ball.pos[0] < 420) or ball.near_pocket:
             offset = 0
-            if ball.is_in_pocket:
-                offset = 30
+            if ball.near_pocket:
+                offset = 40
             if ball.pos[0] - ball.radius < self.left_x - offset:
                 ball.pos[0] = self.left_x + ball.radius - offset
             if ball.pos[0] + ball.radius > self.right_x + offset:
@@ -438,23 +515,29 @@ class Game:
     
     def pocketCollision(self):
         for ball in self.balls:
+            for wall in self.pockets_entrance:
+                if wall.checkCollision(ball):
+                    ball.near_pocket = True
+                    
             for pocket in self.pockets:
-                if pocket.checkCollision(ball.pos, ball.radius) and not ball.is_in_pocket or (ball.pos[1] > self.bottom_y + 30 or ball.pos[1] < self.top_y - 30):
-                    print(f'{ball.num} in by {self.current_turn}')
-                    self.balls_in_pocket.append(ball)
+                if not ball.is_in_pocket and pocket.isBallInPocket(ball):
                     ball.inPocket(pocket)
+                    self.balls_in_pocket.append(ball)
+            if ball.is_in_pocket:
+                ball.collidePocketWalls()
 
     def ballCollision(self):
         for ball1 in self.balls:
-            if ball1.in_motion:
+            if ball1.in_motion and not ball1.is_in_pocket:
                 for ball2 in self.balls:
-                    if ball1 != ball2:
-                        dist = distance(ball1.pos[0], ball1.pos[1], ball2.pos[0], ball2.pos[1])
-                        if dist <= ball1.radius + ball2.radius:
-                            self.ballHit(ball1, ball2)
-                            ball1.updateAnimationState((ball2.contactDir[0], ball2.contactDir[1] * -1))
-                            ball2.updateAnimationState((ball1.contactDir[0], ball1.contactDir[1] * -1))
-                            ball1.collidedBall(ball2, dist)
+                    if not ball2.is_in_pocket:
+                        if ball1 != ball2:
+                            dist = distance(ball1.pos[0], ball1.pos[1], ball2.pos[0], ball2.pos[1])
+                            if dist <= ball1.radius + ball2.radius:
+                                self.ballHit(ball1, ball2)
+                                ball1.updateAnimationState((ball2.contactDir[0], ball2.contactDir[1] * -1))
+                                ball2.updateAnimationState((ball1.contactDir[0], ball1.contactDir[1] * -1))
+                                ball1.collidedBall(ball2, dist)
         
     def scratched(self):
         self.player_scratched = True
@@ -502,8 +585,11 @@ class Game:
         for i in range(len(self.balls_in_pocket)):
             ball = self.balls_in_pocket[i]
             if ball.type == '8ball':
+                if ball.pocket == self.selected_pocket:
+                    print('got right pocket')
+                else:
+                    print('game over - wrogn pocket')
                 self.game_over = True
-                print('game over')
             elif ball.type == 'cueball':
                 self.scratched()
             else:
@@ -511,6 +597,9 @@ class Game:
                     ball_type = self.balls_in_pocket[0].type
                     for i in range(1, len(self.balls_in_pocket)):
                         if self.balls_in_pocket[i].type != ball_type:
+                            return False
+                    if not self.no_balls_in:
+                        if self.balls_in_pocket[0].type != self.player_balls[self.current_turn][0].type:
                             return False
                 if self.no_balls_in:
                     self.assignPlayerBalls(self.balls_in_pocket[0].type)
@@ -532,14 +621,14 @@ class Game:
         return False
 
     def ballsLeft(self, player):
-        count = 0
+        count = 7
         for ball in self.player_balls[player]:
             if ball.is_in_pocket:
-                count += 1
+                count -= 1
         return count
 
     def end(self):
-    
+        
         if not self.player_hit_ball:
             self.scratched()
 
@@ -553,6 +642,10 @@ class Game:
         if not self.game_over and self.end_of_turn:
             self.current_turn, self.waiting = self.waiting, self.current_turn
 
+        if not self.no_balls_in and self.ballsLeft(self.current_turn) == 0:
+            self.selecting_pocket = True
+        
+        self.selected_pocket = None
         self.balls_in_pocket = []
         self.player_hit_ball = False
 
@@ -562,5 +655,3 @@ class Game:
         else:
             text = self.waiting
         return text
-    
-
