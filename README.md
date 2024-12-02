@@ -9,4 +9,7 @@ Resources
 - https://www.youtube.com/watch?v=dJNFPv9Mj-Y
 - https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
 - https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
+- https://en.wikipedia.org/wiki/Rotation_matrix
 
+- https://bbunker.itch.io/8-bit-music-anthology-nes-edition
+- https://hunteraudio.itch.io/8bit-sfx-and-music-pack
