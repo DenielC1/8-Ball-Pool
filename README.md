@@ -13,3 +13,4 @@ Resources
 
 - https://bbunker.itch.io/8-bit-music-anthology-nes-edition
 - https://hunteraudio.itch.io/8bit-sfx-and-music-pack
+- https://mathworld.wolfram.com/PerpendicularVector.html

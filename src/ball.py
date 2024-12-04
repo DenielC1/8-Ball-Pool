@@ -52,6 +52,7 @@ class Ball():
         self.hitpos = (0, 0)
         self.contactDir = np.array([0, 0])
         self.v = np.array([0.0,0.0])
+        self.spinType = 'stun'
         self.contactPoint = None
   
         self.in_motion = False
@@ -77,9 +78,17 @@ class Ball():
 
         drawImage(self.main_sprite, 30*num+offset, 58, opacity=sprite_opacity)
 
-    def updateRotation(self, power):
-        torque = (self.hitpos[0] * self.hitpos[1]) * power
-        self.rotation += torque * .01
+
+    def setUpdate(self, hitpos):
+        self.hitpos = hitpos
+
+    def updateSpin(self):
+        if self.hitpos[1] <= -15:
+            self.spinType = 'backspin'
+        elif self.hitpos[1] >= 15:
+            self.spinType = 'topspin'
+        else:
+            self.spinType = 'stun'
     
     def updatePhysics(self, v):
         self.v = v
@@ -94,9 +103,6 @@ class Ball():
 
     def applyFriction(self):
         self.v = self.v * self.friction_coefficient
-
-    def applyRotation(self):
-        self.rotation *= .9
 
     def updateAnimationState(self, contactDir):
         self.contactDir = contactDir
@@ -148,18 +154,39 @@ class Ball():
 
             self.v = self.v @ inverse_rotation_matrix
 
-
-
-
-
     def collidedBall(self, other, dist):
         impactVector = np.subtract(other.pos, self.pos)
-        
+
         overlap = dist - (self.radius + other.radius)
-        direction = impactVector / np.linalg.norm(impactVector) * (overlap * 0.5)
+        direction = impactVector / np.linalg.norm(impactVector) * (overlap * 0.5 -1) 
         self.pos += direction
         other.pos -= direction
 
+        delta_v = self.getDeltaV(other)
+
+        other.v += -delta_v
+
+        if self.type == 'cueball':
+            if self.spinType == 'backspin':
+                self.v += delta_v + delta_v * abs(self.hitpos[1])/100/2
+            elif self.spinType == 'topspin':
+                self.v -= delta_v * abs(self.hitpos[1])/100/4
+            else:
+                self.v += delta_v
+
+            if abs(self.hitpos[0]) > 0:
+                tangential_vector = np.array([-impactVector[1], impactVector[0]])
+                tangential_vector /= np.linalg.norm(tangential_vector)
+                self.v += tangential_vector * -self.hitpos[0] * 2
+
+            self.hitpos = (0, 0)
+            self.updateSpin()
+        else:
+            self.v += delta_v
+
+    def getDeltaV(self, other):
+        impactVector = np.subtract(other.pos, self.pos)
+        
         dist = self.radius + other.radius
         impactVector = impactVector / np.linalg.norm(impactVector) * dist
         velocityVector = np.subtract(other.v, self.v)
@@ -169,8 +196,8 @@ class Ball():
 
         delta_v = np.dot(impactVector, num/den)
 
-        self.v += delta_v
-        other.v += -delta_v
+        return delta_v
+        
 
     def nearPocket(self):
         self.near_pocket = True
@@ -192,9 +219,6 @@ class Ball():
                 if overlap > 0:
                     self.pos[0] -= (dx/dist) * overlap
                     self.pos[1] -= (dy/dist) * overlap
-                
-                normal_x = dx / dist
-                normal_y = dy / dist
 
                 normal = np.array([dx/dist, dy/dist])
 

@@ -43,6 +43,8 @@ def onAppStart(app):
     
     app.toggles = {'assisted_path_toggle' : Toggle('assisted path', app.cx, 460, 350, 30, 112)} 
 
+    app.toggles['assisted_path_toggle'].active = False
+
     app.game = Game()
     
     app.volume = {'master_volume_slider' : 1,
@@ -51,6 +53,7 @@ def onAppStart(app):
 
     app.main_music = Sound('../music/menu/Action 5 Looped Pure.wav')
     app.main_music.play(loop=True)        
+    app.main_music.setVolume(0)
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill=app.background_color)
@@ -64,7 +67,7 @@ def redrawAll(app):
     else: 
         app.game.drawGame()
 
-
+        #app.game.drawBallPath()
         if not app.game.end_of_turn and not app.game.balls_moving and not app.game.player_scratched and not app.game.selecting_pocket:
             if app.assisted_path_on:
                 app.game.drawBallPath()
@@ -130,7 +133,8 @@ def drawPauseMenu(app):
 def settings_menu_click(app):
         if app.buttons['back_button'].is_hovering:
             app.buttons['back_button'].click()
-            app.on_base_menu = True
+            if not app.game_started:
+                app.on_base_menu = True
             app.on_settings_menu = False
         
         for name in app.sliders:
@@ -185,8 +189,8 @@ def onMousePress(app, mouseX, mouseY):
             app.paused = not app.paused
         elif app.buttons['restart_button'].is_hovering:
             app.buttons['restart_button'].click()
-            resetGame(app)
             app.paused = not app.paused
+            resetGame(app)
         elif app.buttons['return_to_menu_button'].is_hovering:
             app.buttons['return_to_menu_button'].click()
             app.on_base_menu = True
@@ -272,13 +276,16 @@ def onMouseRelease(app, mouseX, mouseY):
         if app.buttons[name].is_hovering:
             app.buttons[name].release()
 
-    for name in app.sliders:
-        if app.sliders[name].is_hovering:
-            app.sliders[name].release()
-            app.volume[name] = app.sliders[name].getVolumeLevel()
-            app.volume_changed = True
+    if app.on_settings_menu:
+        for name in app.sliders:
+            if app.sliders[name].is_hovering:
+                app.sliders[name].release()
+                app.volume[name] = app.sliders[name].getVolumeLevel()
+                app.volume_changed = True
 
-    
+        if app.toggles['assisted_path_toggle'].is_hovering:
+            app.toggles['assisted_path_toggle'].release()
+
     if app.game_started:
         if app.game.is_dragging_powermeter:
             app.game.releasePowermeter()
