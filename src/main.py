@@ -53,9 +53,8 @@ def onAppStart(app):
                   'background_volume_slider' : 1,
                   'sound_fx_volume_slider' :1}
 
-    app.main_music = Sound('../music/menu/Action 5 Looped Pure.wav')
+    app.main_music = Sound('../music/background music.wav')
     app.main_music.play(loop=True)        
-    app.main_music.setVolume(0)
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill=app.background_color)

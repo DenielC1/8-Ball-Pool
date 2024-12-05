@@ -20,7 +20,7 @@ def loadSpritePilImages(url, width, height, row, col, index=None):
     return spritePilImages
 
 class Ball():
-    spritesheetPilImage = loadSpritePilImages('graphics/Pool Balls.png', 243, 108, 4, 4)
+    spritesheetPilImage = loadSpritePilImages('graphics/pool balls.png', 243, 108, 4, 4)
     CueBallSpritesheets = [CMUImage(pilImage) for pilImage in spritesheetPilImage]
     friction_coefficient = .98
     stop_threshold = 20
@@ -172,7 +172,7 @@ class Ball():
             else:
                 self.v += delta_v
 
-            if abs(self.hitpos[0]) > 5:
+            if abs(self.hitpos[0]) > 5 and self.spinType != 'stun':
                 tangential_vector = np.array([-impactVector[1], impactVector[0]])
                 tangential_vector /= np.linalg.norm(tangential_vector)
                 self.v += tangential_vector * -self.hitpos[0] * 1.5

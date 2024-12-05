@@ -7,8 +7,8 @@ class Button:
     normal_font_size = 30
     hover_font_size = 33
     
-    sound_fx = {'click_sound' : Sound('../music/menu/Menu_Select2.wav'), 
-                'release_sound' : Sound('../music/menu/release.wav')}
+    sound_fx = {'click_sound' : Sound('../music/press.wav'), 
+                'release_sound' : Sound('../music/release.wav')}
     
     def __init__ (self, text, x, y, button_width, button_height, line_x1, line_x2):
         self.text = text

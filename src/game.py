@@ -122,7 +122,7 @@ class Game:
         self.text_timer= 0
 
     def drawGame(self):
-        drawImage('graphics/Pool Table.png', self.table_cx, self.table_cy, align='center')
+        drawImage('graphics/pool table.png', self.table_cx, self.table_cy, align='center')
     
         if not self.end_of_turn and self.is_break_shot and self.is_placing_cueball:
             drawLine(self.cueball_start_x, 141, self.cueball_start_x, 458, fill=rgb(203,203,203), dashes=(8, 6))
@@ -131,7 +131,7 @@ class Game:
             x, y = ball.pos
             if ball.type == 'cueball' and self.is_placing_cueball:
                 if not self.end_of_turn and not self.balls_moving and not self.selecting_pocket:
-                    drawImage('graphics/cueball indicator.png', int(x) -12, int(y)-12)
+                    drawImage('graphics/placing indicator.png', int(x) -12, int(y)-12)
                     if self.ball_blinking_timer <10:
                         drawImage(ball.currSprite, int(x)-12, int(y)-12)
                     elif self.ball_blinking_timer >20:
@@ -143,7 +143,7 @@ class Game:
             drawImage('graphics/cue stick.png', int(self.cueball.pos[0])-250, int(self.cueball.pos[1])-6, rotateAngle=-self.cuestick_angle)
 
         drawImage('graphics/other.png', self.table_cx, self.other_cy, align='center')
-        drawImage('graphics/spin_selector.png', self.hitpos[0], self.hitpos[1])
+        drawImage('graphics/spin selector.png', self.hitpos[0], self.hitpos[1])
 
         self.drawScoreboard()
         self.drawPowerMeter()
@@ -190,8 +190,8 @@ class Game:
     
     def drawPowerMeter(self):
         drawRect(self.power_meter_x, self.power_meter_y, self.power_meter_length, self.power_meter_height) 
-        drawImage('graphics/powermeter/other cue stick.png', self.power_meter_x, self.power_meter_y, align='left')
-        drawImage('graphics/powermeter/cue ball.png', 316, 644, align='left')
+        drawImage('graphics/other cue stick.png', self.power_meter_x, self.power_meter_y, align='left')
+        drawImage('graphics/other cue ball.png', 316, 644, align='left')
 
     def drawBallPath(self):
         temp_distance = 1000        
@@ -243,7 +243,7 @@ class Game:
             drawLine(new_x, new_y, new_x-int(collision_ball_line[0]), new_y+int(collision_ball_line[1]), fill='white', lineWidth=3)
 
             drawLine(x1, y1, new_x, new_y, fill='white', lineWidth=3)
-            drawImage('graphics/ball_location.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
+            drawImage('graphics/assisted path ball.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
         else:
             self.found_collision = False
         
@@ -275,7 +275,7 @@ class Game:
                             new_x, new_y = int(x1 + t * (x2-x1)), int(y1 + t *(y2-y1))
                             self.found_collision = True
                             drawLine(x1, y1, new_x, new_y, fill='white')
-                            drawImage('graphics/ball_location.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
+                            drawImage('graphics/assisted path ball.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
                             break
             
         if not self.found_collision:
@@ -307,7 +307,7 @@ class Game:
                     new_x, new_y = int(x1 + furthest_t * dx), int(y1 + furthest_t * dy)
 
                     drawLine(x1, y1, new_x, new_y, fill='white')
-                    drawImage('graphics/ball_location.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
+                    drawImage('graphics/assisted path ball.png', new_x-self.cueball.radius, new_y-self.cueball.radius)
                 else:
                     self.found_collision = False
     
@@ -353,39 +353,40 @@ class Game:
         stripes = [9, 10, 11, 12, 13, 14, 15]
         
 
-        for i in range(len(ballTypeSetup)):
-            for j in range(len(ballTypeSetup[i])):
-                if ballTypeSetup[i][j] == 0:
-                    index = randint(0, len(solids)-1)
-                    num = solids.pop(index)
-                elif ballTypeSetup[i][j] == 1:
-                    index = randint(0, len(stripes)-1)
-                    num = stripes.pop(index)
-                elif ballTypeSetup[i][j] == 8:
-                    num = 8
-                x_offset = i*21
-                y_offset = j*24-(len(ballTypeSetup[i])-1)*12
+        # for i in range(len(ballTypeSetup)):
+        #     for j in range(len(ballTypeSetup[i])):
+        #         if ballTypeSetup[i][j] == 0:
+        #             index = randint(0, len(solids)-1)
+        #             num = solids.pop(index)
+        #         elif ballTypeSetup[i][j] == 1:
+        #             index = randint(0, len(stripes)-1)
+        #             num = stripes.pop(index)
+        #         elif ballTypeSetup[i][j] == 8:
+        #             num = 8
+        #         x_offset = i*21
+        #         y_offset = j*24-(len(ballTypeSetup[i])-1)*12
                 
-                ball = Ball(num, np.array([self.starting_rack_x-x_offset, self.table_cy-y_offset]))
-                if ball.type == 'solids':
-                    self.solid_balls.append(ball)
-                elif ball.type == 'stripes':
-                    self.stripe_balls.append(ball)
-                self.balls.append(ball)      
+        #         ball = Ball(num, np.array([self.starting_rack_x-x_offset, self.table_cy-y_offset]))
+        #         if ball.type == 'solids':
+        #             self.solid_balls.append(ball)
+        #         elif ball.type == 'stripes':
+        #             self.stripe_balls.append(ball)
+        #         self.balls.append(ball)      
 
         self.cueball = Ball(0, np.array([self.cueball_start_x, self.table_cy]))
         self.balls.append(self.cueball)
 
-        # ball =  Ball(1, np.array([self.cueball_start_x-300, self.table_cy]))
-        # self.balls.append(ball)
-        # self.stripe_balls.append(ball)
+        #debug
+        ball =  Ball(15, np.array([self.cueball_start_x-300, self.table_cy]))
+        self.balls.append(ball)
+        self.stripe_balls.append(ball)
 
-        # ball = Ball(2, np.array([self.cueball_start_x-300, self.table_cy-30]))
-        # self.balls.append(ball)
-        # self.solid_balls.append(ball)
+        ball = Ball(1, np.array([self.cueball_start_x-300, self.table_cy-30]))
+        self.balls.append(ball)
+        self.solid_balls.append(ball)
         
-        # ball = Ball(3, np.array([self.cueball_start_x-300, self.table_cy+30]))
-        # self.balls.append(ball)
+        ball = Ball(8, np.array([self.cueball_start_x-300, self.table_cy+30]))
+        self.balls.append(ball)
 
 
     def selectingDirection(self, mouseX, mouseY):
@@ -603,7 +604,7 @@ class Game:
         for i in range(len(self.balls_in_pocket)):
             ball = self.balls_in_pocket[i]
             if ball.type == '8ball':
-                if ball.pocket == self.selected_pocket:
+                if ball.pocket == self.selected_pocket and self.cueball not in self.balls:
                     self.winner = self.current_turn
                 else:
                     self.winner = self.waiting
@@ -632,6 +633,8 @@ class Game:
                 if self.no_balls_in == False:
                     if self.ballsLeft(self.current_turn) == 0:
                         return True
+                else:
+                    return False
 
             if self.no_balls_in or (ball_type == self.player_balls[self.current_turn][0].type):
                 return True
