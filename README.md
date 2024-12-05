@@ -35,7 +35,7 @@ The game is a **two-player competitive game** where each player aims to pocket a
 1. **Run the program:**
    Execute the game using `main.py`.
 2. **External Files Required:**
-   Download additional resources from ...
+   Download additional resources from [Google Drive](https://drive.google.com/drive/folders/1SBljZ_ZRnajPluYR1yIQCvs4m6Jzvq7X?usp=drive_link)
 3. **Install Required Library:**
 
    ```bash
