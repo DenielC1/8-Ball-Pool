@@ -174,10 +174,10 @@ class Ball():
             else:
                 self.v += delta_v
 
-            if abs(self.hitpos[0]) > 0:
+            if abs(self.hitpos[0]) > 5:
                 tangential_vector = np.array([-impactVector[1], impactVector[0]])
                 tangential_vector /= np.linalg.norm(tangential_vector)
-                self.v += tangential_vector * -self.hitpos[0] * 2
+                self.v += tangential_vector * -self.hitpos[0] * 1.5
 
             self.hitpos = (0, 0)
             self.updateSpin()

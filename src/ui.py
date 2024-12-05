@@ -50,11 +50,14 @@ class Button:
         self.is_hovering = False        
 
 class Slider(Button):
-    def __init__(self, text, x, y , width, height, lineWidth):
+    def __init__(self, text, x, y , width, height, lineWidth, type=None, intervalCount=None):
         super().__init__(text, x, y, width, height, x-width/2, x-width/2+lineWidth)
         self.max_x = x+width/2
         self.min_x = x-width/2
         self.offset = 0
+
+        self.type = type
+        self.intervalCount = intervalCount
 
     def draw(self):
         drawLabel(self.text, self.x-self.button_width/2, self.y-self.button_height/2-20, font=self.font_style, align='left', size=18)
@@ -81,6 +84,12 @@ class Slider(Button):
             self.offset = self.button_width-1
         elif self.offset < 0:
             self.offset = 0
+
+        if self.type == 'fixed':
+            interval_size = self.button_width/self.intervalCount
+            print(rounded(self.offset/interval_size))
+            self.offset = rounded(self.offset/interval_size) * interval_size - 1
+
 
     def getVolumeLevel(self):
         volume_level = (self.max_x-self.offset-self.min_x)/(self.max_x-self.min_x)
@@ -115,4 +124,7 @@ class Toggle(Button):
         self.active = not self.active
         self.is_clicked = True
         self.sound_fx['click_sound'].play()
+
+    def release(self):
+        self.is_clicked = False
 

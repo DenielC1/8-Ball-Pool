@@ -1,5 +1,5 @@
 from cmu_graphics import *
-from game import Game
+from game import *
 from ui import *
 from settings import *
 
@@ -145,7 +145,6 @@ def settings_menu_click(app):
             app.toggles['assisted_path_toggle'].click()
             app.assisted_path_on = not app.assisted_path_on
 
-
 def onStep(app):
     if not app.paused and not app.game.game_over:
         takeStep(app)
@@ -175,6 +174,10 @@ def onMouseMove(app, mouseX, mouseY):
 
 
     if app.game_started and not app.paused:
+
+        if type(app.game) == PracticeGame:
+            app.game.onPracticeUIHover(mouseX, mouseY)
+
         if app.game.balls_moving == False:
             if not app.game.cuestick_placed:
                 app.game.selectingDirection(mouseX, mouseY)
@@ -217,14 +220,12 @@ def onMousePress(app, mouseX, mouseY):
     elif app.on_selection_menu:
         if app.buttons['eight_ball_pool_button'].is_hovering:
             app.buttons['eight_ball_pool_button'].click()
-            resetGame(app)
-            app.game_started = True
-            app.on_selection_menu = False
+            gamemodeSelected(app)
+            app.game = Game()
         elif app.buttons['practice_button'].is_hovering:
             app.buttons['practice_button'].click()
-            resetGame(app)
-            app.game_started = True
-            app.on_selection_menu = False
+            gamemodeSelected(app)
+            app.game = PracticeGame()
         elif app.buttons['back_button'].is_hovering:
             app.buttons['back_button'].click()
             app.on_base_menu = True
@@ -244,6 +245,10 @@ def onMousePress(app, mouseX, mouseY):
             app.game_started = False
 
     elif app.game_started and not app.game.game_over and not app.game.end_of_turn and not app.paused:
+        
+        if type(app.game) == PracticeGame:
+            app.game.onPracticeUIClick()
+
         if app.game.selecting_pocket:
             app.game.clickedPocket(mouseX, mouseY)
         else:
@@ -263,6 +268,10 @@ def onMouseDrag(app, mouseX, mouseY):
             app.sliders[name].isDragging(mouseX)
 
     if app.game_started:
+
+        if type(app.game) == PracticeGame:
+            app.game.onPracticeUIDrag(mouseX)
+
         if app.game.is_dragging_powermeter:
             app.game.draggingPowermeter(mouseX)
         if app.game.is_dragging_hitpos:
@@ -287,6 +296,10 @@ def onMouseRelease(app, mouseX, mouseY):
             app.toggles['assisted_path_toggle'].release()
 
     if app.game_started:
+
+        if type(app.game) == PracticeGame:
+            app.game.onPracticeUIRelease()
+
         if app.game.is_dragging_powermeter:
             app.game.releasePowermeter()
         if app.game.is_dragging_hitpos:
@@ -307,6 +320,10 @@ def onKeyPress(app, key):
                 app.on_settings_menu = False
             else:
                 app.paused = not app.paused
+
+def gamemodeSelected(app):
+    app.game_started = True
+    app.on_selection_menu = False
 
 def resetGame(app):
     app.game = Game()
