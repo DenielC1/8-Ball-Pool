@@ -38,14 +38,9 @@ The game is a **two-player competitive game** where each player aims to pocket a
    Download additional resources from ...
 3. **Install Required Library:**
 
+   ```bash
+   pip install numpy
    ```
-   bash
-   ```
-
-   Copy code
-
-   `pip install numpy`
-
 ### **Shortcut Commands**
 
 - **Escape:** Access pause menu.
