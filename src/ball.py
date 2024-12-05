@@ -48,7 +48,6 @@ class Ball():
         self.frameDelay = 1
 
         self.pos = pos
-        self.rotation = 0
         self.hitpos = (0, 0)
         self.contactDir = np.array([0, 0])
         self.v = np.array([0.0,0.0])
@@ -134,7 +133,6 @@ class Ball():
         self.currSprite = self.main_sprite
 
     def collidedWall(self, collision_type):
-        self.rotation *= 1.1
         if collision_type == 'left' or collision_type == 'right' :
             self.v[0] *= -.8
             self.updateAnimationState((self.contactDir[0] * -1, self.contactDir[1]))
@@ -159,9 +157,9 @@ class Ball():
 
         overlap = dist - (self.radius + other.radius)
         direction = impactVector / np.linalg.norm(impactVector) * (overlap * 0.5 -1) 
+        direction =  np.array(direction, dtype=int)
         self.pos += direction
-        other.pos -= direction
-
+        other.pos -=  direction
         delta_v = self.getDeltaV(other)
 
         other.v += -delta_v

@@ -82,10 +82,13 @@ class Game:
         self.solid_balls = []
         self.stripe_balls = []
         self.balls_in_pocket = []
+        
+        self.rack_size = 5
         self.setupBalls()
 
         self.cuestick_angle = 0
 
+        self.power = 2000
         self.power_meter_x = 386
 
         self.center_pos = (171, 615)
@@ -114,8 +117,8 @@ class Game:
         self.found_collision = False
 
         self.player_blinking_timer = 0
-        self.cueball_blinking_timer = 0
-        self.cueball_blinking_timer = 0
+        self.ball_blinking_timer = 0
+        self.ball_blinking_timer = 0
         self.text_timer= 0
 
     def drawGame(self):
@@ -129,12 +132,12 @@ class Game:
             if ball.type == 'cueball' and self.is_placing_cueball:
                 if not self.end_of_turn and not self.balls_moving and not self.selecting_pocket:
                     drawImage('graphics/cueball indicator.png', int(x) -12, int(y)-12)
-                    if self.cueball_blinking_timer <5:
-                        drawImage(ball.currSprite, int(x)-12, int(y)-12, rotateAngle=ball.rotation)
-                    elif self.cueball_blinking_timer >10:
-                        self.cueball_blinking_timer = 0   
+                    if self.ball_blinking_timer <10:
+                        drawImage(ball.currSprite, int(x)-12, int(y)-12)
+                    elif self.ball_blinking_timer >20:
+                        self.ball_blinking_timer = 0   
             else:
-                drawImage(ball.currSprite, int(x)-12, int(y)-12, rotateAngle=ball.rotation)
+                drawImage(ball.currSprite, int(x)-12, int(y)-12)
 
         if not self.end_of_turn and not self.balls_moving and not self.player_scratched and not self.selecting_pocket:
             drawImage('graphics/cue stick.png', int(self.cueball.pos[0])-250, int(self.cueball.pos[1])-6, rotateAngle=-self.cuestick_angle)
@@ -335,7 +338,7 @@ class Game:
                 if self.game_started:
                     self.game_started = False
         elif self.is_placing_cueball:
-            self.cueball_blinking_timer += 1
+            self.ball_blinking_timer += 1
 
     def setupBalls(self):
 
@@ -406,7 +409,7 @@ class Game:
 
     def releasePowermeter(self):
         contactDirection = np.array([np.cos(np.radians(-self.cuestick_angle)), np.sin(np.radians(-self.cuestick_angle))])
-        power = (self.power_meter_x-self.power_meter_min_x)/(self.power_meter_max_x-self.power_meter_min_x)* 2000
+        power = (self.power_meter_x-self.power_meter_min_x)/(self.power_meter_max_x-self.power_meter_min_x)* self.power
         powerDirection = power * contactDirection 
 
         self.cueball.updatePhysics(-powerDirection)    
@@ -674,7 +677,17 @@ class PracticeGame(Game):
         self.sliders = {'ball_count_slider' : Slider('# of balls', 75, 50, 100, 25, 90, 'fixed', 5),
                         'power_slider' : Slider('power scale', 200, 50, 100, 25, 102)}
 
-        self.buttons = {}
+        self.toggles = {'dragging_balls_button' : Toggle('drag balls', 350, 25, 130, 25, 25),
+                        'reset_button' : Toggle('reset', 350, 50, 130, 25, 25)}
+        
+        self.rack_size = 5
+
+        self.is_break_shot = False
+        self.end_of_turn = False
+
+        self.dragging_balls = False
+        self.is_dragging_ball = False
+        self.dragged_ball = None
 
     def drawGame(self):
         drawImage('graphics/Pool Table.png', self.table_cx, self.table_cy, align='center')
@@ -683,17 +696,17 @@ class PracticeGame(Game):
     
         for ball in self.balls:
             x, y = ball.pos
-            if ball.type == 'cueball' and self.is_placing_cueball:
-                if not self.end_of_turn and not self.balls_moving and not self.selecting_pocket:
+            if self.dragging_balls:
+                if not self.end_of_turn and not self.balls_moving:
                     drawImage('graphics/cueball indicator.png', int(x) -12, int(y)-12)
-                    if self.cueball_blinking_timer <5:
-                        drawImage(ball.currSprite, int(x)-12, int(y)-12, rotateAngle=ball.rotation)
-                    elif self.cueball_blinking_timer >10:
-                        self.cueball_blinking_timer = 0   
+                    if self.ball_blinking_timer <10:
+                        drawImage(ball.currSprite, int(x)-12, int(y)-12)
+                    elif self.ball_blinking_timer >20:
+                        self.ball_blinking_timer = 0   
             else:
-                drawImage(ball.currSprite, int(x)-12, int(y)-12, rotateAngle=ball.rotation)
+                drawImage(ball.currSprite, int(x)-12, int(y)-12)
 
-        if not self.end_of_turn and not self.balls_moving and not self.player_scratched and not self.selecting_pocket:
+        if not self.end_of_turn and not self.balls_moving and not self.dragging_balls:
             drawImage('graphics/cue stick.png', int(self.cueball.pos[0])-250, int(self.cueball.pos[1])-6, rotateAngle=-self.cuestick_angle)
 
         drawImage('graphics/other.png', self.table_cx, self.other_cy, align='center')
@@ -701,21 +714,40 @@ class PracticeGame(Game):
 
         self.drawPowerMeter()
         
-        if self.end_of_turn:
-            self.drawAnimations()
+        #if self.end_of_turn:
+            #self.drawAnimations()
 
     def drawPracticeUI(self):
         for name in self.sliders:
             self.sliders[name].draw()
 
+        for name in self.toggles:
+            self.toggles[name].draw()
+
     def onPracticeUIHover(self, mouseX, mouseY):
         for name in self.sliders:
             self.sliders[name].onHover(mouseX, mouseY)
+
+        for name in self.toggles:
+            self.toggles[name].onHover(mouseX, mouseY)
+        
 
     def onPracticeUIClick(self):
         for name in self.sliders:
             if self.sliders[name].is_hovering:
                 self.sliders[name].click()
+                return True
+
+        for name in self.toggles:
+            if self.toggles[name].is_hovering:
+                self.toggles[name].click()
+                if name == 'dragging_balls_button':
+                    self.dragging_balls = not self.dragging_balls
+                elif name == 'reset_button':
+                    self.setupBalls()
+                    self.toggles[name].active = False
+                return True
+        return False
 
     def onPracticeUIDrag(self, mouseX):
         for name in self.sliders:
@@ -727,8 +759,21 @@ class PracticeGame(Game):
             if self.sliders[name].is_clicked:
                 self.sliders[name].release()
 
+                if name == 'ball_count_slider':
+                    self.rack_size = 5-self.sliders[name].count
+                    self.setupBalls()
+        
+                if name == 'power_slider':
+                    print(self.sliders[name].offset)
+                    self.power = 2000 - self.sliders[name].offset * 10
+        for name in self.toggles:
+            if self.toggles[name].is_clicked:
+                self.toggles[name].release()
+
 
     def setupBalls(self):
+
+        self.balls = []
 
         ballTypeSetup = [[0],
                         [1,0],
@@ -740,8 +785,7 @@ class PracticeGame(Game):
         solids = [1, 2, 3, 4, 5, 6, 7]
         stripes = [9, 10, 11, 12, 13, 14, 15]
         
-
-        for i in range(len(ballTypeSetup)):
+        for i in range(self.rack_size):
             for j in range(len(ballTypeSetup[i])):
                 if ballTypeSetup[i][j] == 0:
                     index = randint(0, len(solids)-1)
@@ -763,3 +807,30 @@ class PracticeGame(Game):
 
         self.cueball = Ball(0, np.array([self.cueball_start_x, self.table_cy]))
         self.balls.append(self.cueball)
+
+    def clickedBall(self, mouseX, mouseY):
+        for ball in self.balls:
+            dist = distance(ball.pos[0], ball.pos[1], mouseX, mouseY)
+            if dist <= ball.radius:
+                self.is_dragging_ball = True
+                self.dragged_ball = ball
+    
+    def draggingBall(self, mouseX, mouseY):
+
+        self.dragged_ball.pos = np.array([mouseX, mouseY])
+    
+        if mouseX-self.dragged_ball.radius < self.boundary_x:
+            self.dragged_ball.pos[0] = self.boundary_x + self.dragged_ball.radius
+        elif mouseX+self.dragged_ball.radius > self.boundary_x + self.boundary_width:
+            self.dragged_ball.pos[0] = self.boundary_x + self.boundary_width - self.dragged_ball.radius
+        if mouseY-self.dragged_ball.radius < self.boundary_y:
+            self.dragged_ball.pos[1] = self.boundary_y + self.dragged_ball.radius
+        elif mouseY+self.dragged_ball.radius > self.boundary_y + self.boundary_height:
+            self.dragged_ball.pos[1] = self.boundary_y + self.boundary_height - self.dragged_ball.radius
+        
+    def releaseBall(self):
+        self.is_dragging_ball = False
+        self.dragged_ball = None
+
+    def end(self):            
+        pass

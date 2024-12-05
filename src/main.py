@@ -7,6 +7,8 @@ def onAppStart(app):
     app.stepsPerSecond = FPS
     app.paused = False
 
+    app.game_type = None
+
     app.cx = app.width/2
     app.cy = app.height/2
 
@@ -67,8 +69,9 @@ def redrawAll(app):
     else: 
         app.game.drawGame()
 
-        #app.game.drawBallPath()
-        if not app.game.end_of_turn and not app.game.balls_moving and not app.game.player_scratched and not app.game.selecting_pocket:
+        if ((not app.game.end_of_turn and not app.game.balls_moving) and 
+        ((not app.game.player_scratched and not app.game.selecting_pocket) or 
+        (app.game_type == 'practice' and not app.game.dragging_balls))):
             if app.assisted_path_on:
                 app.game.drawBallPath()
 
@@ -129,22 +132,6 @@ def drawPauseMenu(app):
     app.buttons['settings_button'].draw()
     app.buttons['quit_button'].draw()
     
-
-def settings_menu_click(app):
-        if app.buttons['back_button'].is_hovering:
-            app.buttons['back_button'].click()
-            if not app.game_started:
-                app.on_base_menu = True
-            app.on_settings_menu = False
-        
-        for name in app.sliders:
-            if app.sliders[name].is_hovering:
-                app.sliders[name].click()
-        
-        if app.toggles['assisted_path_toggle'].is_hovering:
-            app.toggles['assisted_path_toggle'].click()
-            app.assisted_path_on = not app.assisted_path_on
-
 def onStep(app):
     if not app.paused and not app.game.game_over:
         takeStep(app)
@@ -182,54 +169,66 @@ def onMouseMove(app, mouseX, mouseY):
             if not app.game.cuestick_placed:
                 app.game.selectingDirection(mouseX, mouseY)
     
-def onMousePress(app, mouseX, mouseY):
+def settings_menu_click(app):
+    if app.buttons['back_button'].is_hovering:
+        app.buttons['back_button'].click()
+    
+    for name in app.sliders:
+        if app.sliders[name].is_hovering:
+            app.sliders[name].click()
+    
+    for name in app.toggles:
+        if app.toggles[name].is_hovering:
+            app.toggles[name].click()
 
+def settings_menu_release(app):
+
+    for name in app.sliders:
+        if app.sliders[name].is_clicked:
+            app.sliders[name].release()
+            app.volume[name] = app.sliders[name].getVolumeLevel()
+            app.volume_changed = True
+
+    if app.buttons['back_button'].is_clicked:
+        app.buttons['back_button'].release()
+        if not app.game_started:
+            app.on_base_menu = True
+        app.on_settings_menu = False
+    
+    if app.toggles['assisted_path_toggle'].is_clicked:
+        app.toggles['assisted_path_toggle'].release()
+        app.assisted_path_on = not app.assisted_path_on
+
+def onMousePress(app, mouseX, mouseY):
     if app.paused:
         if app.on_settings_menu:
             settings_menu_click(app)
         elif app.buttons['resume_button'].is_hovering:
             app.buttons['resume_button'].click()
-            app.paused = not app.paused
         elif app.buttons['restart_button'].is_hovering:
             app.buttons['restart_button'].click()
-            app.paused = not app.paused
-            resetGame(app)
         elif app.buttons['return_to_menu_button'].is_hovering:
             app.buttons['return_to_menu_button'].click()
-            app.on_base_menu = True
-            app.game_started = False
-            app.paused = not app.paused
         elif app.buttons['settings_button'].is_hovering:
             app.buttons['settings_button'].click()
-            app.on_settings_menu = True
         elif app.buttons['quit_button'].is_hovering:
-            app.quit()
+            app.buttons['quit_button'].click()
 
     elif app.on_base_menu:
         if app.buttons['new_game_button'].is_hovering:
             app.buttons['new_game_button'].click()
-            app.on_selection_menu = True
-            app.on_base_menu = False
         elif app.buttons['settings_button'].is_hovering:
             app.buttons['settings_button'].click()
-            app.on_settings_menu = True
-            app.on_base_menu = False
         elif app.buttons['quit_button'].is_hovering:
-            app.quit()
+            app.buttons['quit_button'].click()
 
     elif app.on_selection_menu:
         if app.buttons['eight_ball_pool_button'].is_hovering:
             app.buttons['eight_ball_pool_button'].click()
-            gamemodeSelected(app)
-            app.game = Game()
         elif app.buttons['practice_button'].is_hovering:
             app.buttons['practice_button'].click()
-            gamemodeSelected(app)
-            app.game = PracticeGame()
         elif app.buttons['back_button'].is_hovering:
             app.buttons['back_button'].click()
-            app.on_base_menu = True
-            app.on_selection_menu = False
 
     elif app.on_settings_menu:
         settings_menu_click(app)
@@ -237,29 +236,35 @@ def onMousePress(app, mouseX, mouseY):
     elif app.game.game_over:
         if app.buttons['play_again_button'].is_hovering:
             app.buttons['play_again_button'].click()
-            resetGame(app)
         elif app.buttons['return_to_menu_button'].is_hovering:
-            app.buttons['return_to_menu_button'].click()
-            resetGame(app)
-            app.on_base_menu = True
-            app.game_started = False
+            app.buttons['return_to_menu_button'].click()            
 
-    elif app.game_started and not app.game.game_over and not app.game.end_of_turn and not app.paused:
+    if app.game_started and not app.game.game_over and not app.game.end_of_turn and not app.paused:
         
         if type(app.game) == PracticeGame:
-            app.game.onPracticeUIClick()
+            if app.game.onPracticeUIClick():
+                pass
 
-        if app.game.selecting_pocket:
-            app.game.clickedPocket(mouseX, mouseY)
-        else:
-            if app.game.player_scratched:
-                if app.game.is_placing_cueball:
-                    app.game.clickedCueball(mouseX, mouseY)
+            elif app.game.dragging_balls:
+                app.game.clickedBall(mouseX, mouseY)
             elif not app.game.cuestick_placed:
-                app.game.placeCuestick()
+                    app.game.placeCuestick()
             elif not app.game.balls_moving:
                 app.game.clickedPowermeter(mouseX, mouseY)
                 app.game.clickedHitpos(mouseX, mouseY)
+
+        else:
+            if app.game.selecting_pocket:
+                app.game.clickedPocket(mouseX, mouseY)
+            else:
+                if app.game.player_scratched:
+                    if app.game.is_placing_cueball:
+                        app.game.clickedCueball(mouseX, mouseY)
+                elif not app.game.cuestick_placed:
+                    app.game.placeCuestick()
+                elif not app.game.balls_moving:
+                    app.game.clickedPowermeter(mouseX, mouseY)
+                    app.game.clickedHitpos(mouseX, mouseY)
 
 def onMouseDrag(app, mouseX, mouseY):
 
@@ -271,47 +276,98 @@ def onMouseDrag(app, mouseX, mouseY):
 
         if type(app.game) == PracticeGame:
             app.game.onPracticeUIDrag(mouseX)
+            if app.game.is_dragging_ball:
+                app.game.draggingBall(mouseX, mouseY)
+        else:
+            if app.game.is_dragging_cueball:
+                app.game.draggingCueball(mouseX, mouseY)
 
         if app.game.is_dragging_powermeter:
             app.game.draggingPowermeter(mouseX)
         if app.game.is_dragging_hitpos:
             app.game.draggingHitpos(mouseX, mouseY)
-        if app.game.is_dragging_cueball:
-            app.game.draggingCueball(mouseX, mouseY)
 
 def onMouseRelease(app, mouseX, mouseY):
+    if app.paused:
+        if app.on_settings_menu:
+            settings_menu_release(app)
+        elif app.buttons['resume_button'].is_clicked:
+            app.buttons['resume_button'].release()
+            app.paused = not app.paused
+        elif app.buttons['restart_button'].is_clicked:
+            app.buttons['restart_button'].release()
+            app.paused = not app.paused
+            resetGame(app)
+        elif app.buttons['return_to_menu_button'].is_clicked:
+            app.buttons['return_to_menu_button'].release()
+            app.on_base_menu = True
+            app.game_started = False
+            app.paused = not app.paused
+        elif app.buttons['settings_button'].is_clicked:
+            app.buttons['settings_button'].release()
+            app.on_settings_menu = True
+        elif app.buttons['quit_button'].is_clicked:
+            app.buttons['quit_button'].release()
+            app.quit()
 
-    for name in app.buttons:
-        if app.buttons[name].is_hovering:
-            app.buttons[name].release()
+    elif app.on_base_menu:
+        if app.buttons['new_game_button'].is_clicked:
+            app.buttons['new_game_button'].release()
+            app.on_selection_menu = True
+            app.on_base_menu = False
+        elif app.buttons['settings_button'].is_clicked:
+            app.buttons['settings_button'].release()
+            app.on_settings_menu = True
+            app.on_base_menu = False
+        elif app.buttons['quit_button'].is_clicked:
+            app.buttons['quit_button'].release()
+            
+            app.quit()
 
-    if app.on_settings_menu:
-        for name in app.sliders:
-            if app.sliders[name].is_hovering:
-                app.sliders[name].release()
-                app.volume[name] = app.sliders[name].getVolumeLevel()
-                app.volume_changed = True
+    elif app.on_selection_menu:
+        if app.buttons['eight_ball_pool_button'].is_clicked:
+            app.buttons['eight_ball_pool_button'].release()
+            app.game_type = 'eight_ball'
+            gamemodeSelected(app)
+        elif app.buttons['practice_button'].is_clicked:
+            app.buttons['practice_button'].release()
+            app.game_type = 'practice'
+            gamemodeSelected(app)
+        elif app.buttons['back_button'].is_clicked:
+            app.buttons['back_button'].release()
+            app.on_base_menu = True
+            app.on_selection_menu = False
 
-        if app.toggles['assisted_path_toggle'].is_hovering:
-            app.toggles['assisted_path_toggle'].release()
+    elif app.game.game_over:
+        if app.buttons['play_again_button'].is_clicked:
+            app.buttons['play_again_button'].release()
+            resetGame(app)
+        elif app.buttons['return_to_menu_button'].is_clicked:
+            app.buttons['return_to_menu_button'].release()
+            resetGame(app)
+            app.on_base_menu = True
+            app.game_started = False
+    
+    elif app.on_settings_menu:
+        settings_menu_release(app)
 
     if app.game_started:
 
         if type(app.game) == PracticeGame:
             app.game.onPracticeUIRelease()
+            if app.game.is_dragging_ball:
+                app.game.releaseBall()
+        else:
+            if app.game.is_dragging_cueball:
+                app.game.releaseCueball()
+                app.game.cueballPlaced()
 
         if app.game.is_dragging_powermeter:
             app.game.releasePowermeter()
         if app.game.is_dragging_hitpos:
             app.game.releaseHitpos()
-        if app.game.is_dragging_cueball:
-            app.game.releaseCueball()
-            app.game.cueballPlaced()
 
 def onKeyPress(app, key):
-    if key == 'r':
-        resetGame(app)
-        app.paused = False
     if key == 'enter':
         takeStep(app)
     if app.game_started:
@@ -322,11 +378,15 @@ def onKeyPress(app, key):
                 app.paused = not app.paused
 
 def gamemodeSelected(app):
+    resetGame(app)
     app.game_started = True
     app.on_selection_menu = False
 
 def resetGame(app):
-    app.game = Game()
+    if app.game_type == 'eight_ball':
+        app.game = Game()
+    else:
+        app.game = PracticeGame()
 
 def main():
     runApp(width=WIDTH, height=HEIGHT)

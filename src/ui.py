@@ -46,8 +46,7 @@ class Button:
         self.sound_fx['click_sound'].play()
         
     def release(self):
-        self.is_clicked = False
-        self.is_hovering = False        
+        self.is_clicked = False    
 
 class Slider(Button):
     def __init__(self, text, x, y , width, height, lineWidth, type=None, intervalCount=None):
@@ -56,6 +55,9 @@ class Slider(Button):
         self.min_x = x-width/2
         self.offset = 0
 
+        if intervalCount != None:
+            self.count = rounded(self.max_x/intervalCount)
+        
         self.type = type
         self.intervalCount = intervalCount
 
@@ -87,7 +89,7 @@ class Slider(Button):
 
         if self.type == 'fixed':
             interval_size = self.button_width/self.intervalCount
-            print(rounded(self.offset/interval_size))
+            self.count = rounded(self.offset/interval_size)
             self.offset = rounded(self.offset/interval_size) * interval_size - 1
 
 
