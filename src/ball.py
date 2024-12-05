@@ -140,6 +140,7 @@ class Ball():
             self.v[1] *= - .8
             self.updateAnimationState((self.contactDir[0], self.contactDir[1] * -1))
         elif collision_type == 'diagonal':
+            self.updateAnimationState((self.contactDir[0] * -1, self.contactDir[1] * -1))
             contact_angle = np.arctan2(self.pos[1]-self.contactPoint[1], self.pos[0]-self.contactPoint[0])
             rotation_matrix = np.array([[np.cos(contact_angle), np.sin(contact_angle)], 
                                         [-np.sin(contact_angle), np.cos(contact_angle)]])
@@ -208,7 +209,7 @@ class Ball():
         if self.pocket != None:
 
             if self.pocket.check_collision_with_circle(self):
-
+                
                 dx, dy = self.pos[0] - self.pocket.cx, self.pos[1] - self.pocket.cy
 
                 dist = distance(self.pos[0], self.pos[1], self.pocket.cx, self.pocket.cy)

@@ -154,14 +154,15 @@ class Game:
         if self.end_of_turn:
             self.drawAnimations()
 
-        # for wall in self.collidables:
-        #     drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
-        # # for wall in self.pockets:
-        # #    drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
-        # for wall in self.pockets_entrance:
-        #     drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
+    def drawDebug(self):
+        for wall in self.collidables:
+            drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
+        for pocket in self.pockets:
+            drawCircle(pocket.cx, pocket.cy, pocket.radius, fill=pocket.color, opacity=30)
+        for wall in self.pockets_entrance:
+            drawLine(wall.wall_start[0], wall.wall_start[1], wall.wall_end[0],  wall.wall_end[1], fill=wall.color)
 
-        # drawRect(self.boundary_x, self.boundary_y, self.boundary_width, self.boundary_height, fill='red', opacity= 20)
+        drawRect(self.boundary_x, self.boundary_y, self.boundary_width, self.boundary_height, fill='red', opacity= 20)
 
     def drawScoreboard(self):
         if self.current_turn == 'Player 1':
@@ -353,30 +354,38 @@ class Game:
         stripes = [9, 10, 11, 12, 13, 14, 15]
         
 
-        # for i in range(len(ballTypeSetup)):
-        #     for j in range(len(ballTypeSetup[i])):
-        #         if ballTypeSetup[i][j] == 0:
-        #             index = randint(0, len(solids)-1)
-        #             num = solids.pop(index)
-        #         elif ballTypeSetup[i][j] == 1:
-        #             index = randint(0, len(stripes)-1)
-        #             num = stripes.pop(index)
-        #         elif ballTypeSetup[i][j] == 8:
-        #             num = 8
-        #         x_offset = i*21
-        #         y_offset = j*24-(len(ballTypeSetup[i])-1)*12
+        for i in range(len(ballTypeSetup)):
+            for j in range(len(ballTypeSetup[i])):
+                if ballTypeSetup[i][j] == 0:
+                    index = randint(0, len(solids)-1)
+                    num = solids.pop(index)
+                elif ballTypeSetup[i][j] == 1:
+                    index = randint(0, len(stripes)-1)
+                    num = stripes.pop(index)
+                elif ballTypeSetup[i][j] == 8:
+                    num = 8
+                x_offset = i*21
+                y_offset = j*24-(len(ballTypeSetup[i])-1)*12
                 
-        #         ball = Ball(num, np.array([self.starting_rack_x-x_offset, self.table_cy-y_offset]))
-        #         if ball.type == 'solids':
-        #             self.solid_balls.append(ball)
-        #         elif ball.type == 'stripes':
-        #             self.stripe_balls.append(ball)
-        #         self.balls.append(ball)      
+                ball = Ball(num, np.array([self.starting_rack_x-x_offset, self.table_cy-y_offset]))
+                if ball.type == 'solids':
+                    self.solid_balls.append(ball)
+                elif ball.type == 'stripes':
+                    self.stripe_balls.append(ball)
+                self.balls.append(ball)      
 
         self.cueball = Ball(0, np.array([self.cueball_start_x, self.table_cy]))
         self.balls.append(self.cueball)
 
         #debug
+    def setupTestBalls(self):
+        self.balls = []
+        self.stripe_balls = []
+        self.solid_balls = []
+        
+        self.cueball = Ball(0, np.array([self.cueball_start_x, self.table_cy]))
+        self.balls.append(self.cueball)
+
         ball =  Ball(15, np.array([self.cueball_start_x-300, self.table_cy]))
         self.balls.append(ball)
         self.stripe_balls.append(ball)
@@ -604,7 +613,7 @@ class Game:
         for i in range(len(self.balls_in_pocket)):
             ball = self.balls_in_pocket[i]
             if ball.type == '8ball':
-                if ball.pocket == self.selected_pocket and self.cueball not in self.balls:
+                if ball.pocket == self.selected_pocket and self.cueball not in self.balls_in_pocket:
                     self.winner = self.current_turn
                 else:
                     self.winner = self.waiting
@@ -701,7 +710,7 @@ class PracticeGame(Game):
             x, y = ball.pos
             if self.dragging_balls:
                 if not self.end_of_turn and not self.balls_moving:
-                    drawImage('graphics/cueball indicator.png', int(x) -12, int(y)-12)
+                    drawImage('graphics/placing indicator.png', int(x) -12, int(y)-12)
                     if self.ball_blinking_timer <10:
                         drawImage(ball.currSprite, int(x)-12, int(y)-12)
                     elif self.ball_blinking_timer >20:
@@ -713,13 +722,10 @@ class PracticeGame(Game):
             drawImage('graphics/cue stick.png', int(self.cueball.pos[0])-250, int(self.cueball.pos[1])-6, rotateAngle=-self.cuestick_angle)
 
         drawImage('graphics/other.png', self.table_cx, self.other_cy, align='center')
-        drawImage('graphics/spin_selector.png', self.hitpos[0], self.hitpos[1])
+        drawImage('graphics/spin selector.png', self.hitpos[0], self.hitpos[1])
 
         self.drawPowerMeter()
         
-        #if self.end_of_turn:
-            #self.drawAnimations()
-
     def drawPracticeUI(self):
         for name in self.sliders:
             self.sliders[name].draw()
@@ -767,8 +773,8 @@ class PracticeGame(Game):
                     self.setupBalls()
         
                 if name == 'power_slider':
-                    print(self.sliders[name].offset)
                     self.power = 2000 - self.sliders[name].offset * 10
+                    print(self.power)
         for name in self.toggles:
             if self.toggles[name].is_clicked:
                 self.toggles[name].release()

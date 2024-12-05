@@ -6,6 +6,8 @@ from settings import *
 def onAppStart(app):
     app.stepsPerSecond = FPS
     app.paused = False
+    app.debug = False
+    app.show_collision = False
 
     app.game_type = None
 
@@ -20,6 +22,7 @@ def onAppStart(app):
     app.on_base_menu = True
     app.on_selection_menu = False
     app.on_settings_menu = False
+    app.pause_menu = False
 
     app.game_started = False
 
@@ -32,18 +35,19 @@ def onAppStart(app):
                    'quit_button' : Button('quit', app.cx, 425, 80, 50, 410, 490),
                    'eight_ball_pool_button' : Button('eight-ball pool', app.cx, 275, 250, 50, 325, 575),
                    'practice_button': Button('practice', app.cx, 325, 140, 50, 380, 520),
-                   'back_button': Button('back', app.cx, 490, 80, 50, 410, 490),
+                   'back_button': Button('back', app.cx, 530, 80, 50, 410, 490),
                    'play_again_button': Button('play again', app.cx, 275, 170, 50, 360, 540),
-                'resume_button' : Button('resume', app.cx, 225, 120, 50, 390, 510),
+                   'resume_button' : Button('resume', app.cx, 225, 120, 50, 390, 510),
                    'restart_button' : Button('restart', app.cx, 275, 130, 50, 385, 515),
                    'return_to_menu_button' : Button('return to menu', app.cx, 325, 220, 50, 340, 560),
                    }
     
-    app.sliders = {'master_volume_slider' : Slider('master volume', app.cx, 300, 350, 25, 122),
-                   'background_volume_slider' : Slider('background volume', app.cx, 360, 350, 25, 156),
-                   'sound_fx_volume_slider' : Slider('sound fx volume', app.cx, 420, 350, 25, 138)}
+    app.sliders = {'master_volume_slider' : Slider('master volume', app.cx, 310, 350, 25, 122),
+                   'background_volume_slider' : Slider('background volume', app.cx, 370, 350, 25, 156),
+                   'sound_fx_volume_slider' : Slider('sound fx volume', app.cx, 430, 350, 25, 138)}
     
-    app.toggles = {'assisted_path_toggle' : Toggle('assisted path', app.cx, 460, 350, 30, 112)} 
+    app.toggles = {'assisted_path_toggle' : Toggle('assisted path', app.cx, 470, 350, 30, 112), 
+                   'debug_toggle' : Toggle('debug', app.cx, 510, 350, 30, 112)} 
 
     app.toggles['assisted_path_toggle'].active = False
 
@@ -58,6 +62,15 @@ def onAppStart(app):
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill=app.background_color)
+    
+    if app.debug: 
+
+        drawLabel('debug active', 15, app.height-65, align='left', font=app.font_style, size=16)
+        drawLine(15, app.height-55, 106, app.height-55)
+
+        drawLabel(f'paused: {app.paused}', 15, app.height-40, align='left', font=app.font_style, size=16)
+        drawLabel(f'show collision: {app.show_collision}', 15, app.height-15, align='left', font=app.font_style, size=16)
+    
     if not app.game_started:
         if app.on_base_menu:
             drawBaseMenu(app)
@@ -68,13 +81,16 @@ def redrawAll(app):
     else: 
         app.game.drawGame()
 
+        if app.show_collision:
+            app.game.drawDebug()
+
         if ((not app.game.end_of_turn and not app.game.balls_moving) and 
         ((not app.game.player_scratched and not app.game.selecting_pocket) or 
         (app.game_type == 'practice' and not app.game.dragging_balls))):
             if app.assisted_path_on:
                 app.game.drawBallPath()
 
-        if app.paused:
+        if app.pause_menu:
             drawRect(0, 0, app.width, app.height, opacity=50)
             if app.on_settings_menu:
                 drawSettingsMenu(app)
@@ -83,7 +99,7 @@ def redrawAll(app):
 
         elif app.game.game_over:
             drawGameOverMenu(app)
-
+    
 def drawBaseMenu(app):
     drawLabel("8 Ball Pool", app.cx, 200, font=app.font_style, size=app.heading_size)
     drawLine(210, 240, 680, 240)
@@ -104,7 +120,7 @@ def drawSettingsMenu(app):
     drawLabel("Settings", app.cx, 200, font=app.font_style, size=app.heading_size)
     drawLine(280, 240, 600, 240)
 
-    drawRect(app.cx, 400, 400, 300, fill=app.background_color2, border='black',align='center')
+    drawRect(app.cx, 425, 400, 350, fill=app.background_color2, border='black',align='center')
 
     app.buttons['back_button'].draw()
 
@@ -132,7 +148,7 @@ def drawPauseMenu(app):
     app.buttons['quit_button'].draw()
     
 def onStep(app):
-    if not app.paused and not app.game.game_over:
+    if not app.pause_menu and not app.paused and not app.game.game_over:
         takeStep(app)
 
     if app.volume_changed:
@@ -159,7 +175,7 @@ def onMouseMove(app, mouseX, mouseY):
         app.toggles[name].onHover(mouseX, mouseY)
 
 
-    if app.game_started and not app.paused:
+    if app.game_started and not app.pause_menu:
 
         if type(app.game) == PracticeGame:
             app.game.onPracticeUIHover(mouseX, mouseY)
@@ -198,8 +214,17 @@ def settings_menu_release(app):
         app.toggles['assisted_path_toggle'].release()
         app.assisted_path_on = not app.assisted_path_on
 
+    if app.toggles['debug_toggle'].is_clicked:
+        app.toggles['debug_toggle'].release()
+        app.debug = not app.debug
+
+        if app.debug == False:
+            app.paused = False
+            app.show_collision = False
+
+
 def onMousePress(app, mouseX, mouseY):
-    if app.paused:
+    if app.pause_menu:
         if app.on_settings_menu:
             settings_menu_click(app)
         elif app.buttons['resume_button'].is_hovering:
@@ -238,7 +263,7 @@ def onMousePress(app, mouseX, mouseY):
         elif app.buttons['return_to_menu_button'].is_hovering:
             app.buttons['return_to_menu_button'].click()            
 
-    if app.game_started and not app.game.game_over and not app.game.end_of_turn and not app.paused:
+    if app.game_started and not app.game.game_over and not app.game.end_of_turn and not app.pause_menu:
         
         if type(app.game) == PracticeGame:
             if app.game.onPracticeUIClick():
@@ -287,21 +312,21 @@ def onMouseDrag(app, mouseX, mouseY):
             app.game.draggingHitpos(mouseX, mouseY)
 
 def onMouseRelease(app, mouseX, mouseY):
-    if app.paused:
+    if app.pause_menu:
         if app.on_settings_menu:
             settings_menu_release(app)
         elif app.buttons['resume_button'].is_clicked:
             app.buttons['resume_button'].release()
-            app.paused = not app.paused
+            app.pause_menu = not app.pause_menu
         elif app.buttons['restart_button'].is_clicked:
             app.buttons['restart_button'].release()
-            app.paused = not app.paused
+            app.pause_menu = not app.pause_menu
             resetGame(app)
         elif app.buttons['return_to_menu_button'].is_clicked:
             app.buttons['return_to_menu_button'].release()
             app.on_base_menu = True
             app.game_started = False
-            app.paused = not app.paused
+            app.pause_menu = not app.pause_menu
         elif app.buttons['settings_button'].is_clicked:
             app.buttons['settings_button'].release()
             app.on_settings_menu = True
@@ -367,14 +392,21 @@ def onMouseRelease(app, mouseX, mouseY):
             app.game.releaseHitpos()
 
 def onKeyPress(app, key):
-    if key == 'enter':
-        takeStep(app)
+    if app.debug:
+        if key == 'p':
+            app.paused = not app.paused
+        if key == 'o':
+            app.show_collision = not app.show_collision
+        if app.game_type == 'eight_ball' and key == 'l':
+            app.game.setupTestBalls()
+        elif key == 'enter':
+            takeStep(app)
     if app.game_started:
         if key == 'escape':
-            if app.paused and app.on_settings_menu:
+            if app.pause_menu and app.on_settings_menu:
                 app.on_settings_menu = False
             else:
-                app.paused = not app.paused
+                app.pause_menu = not app.pause_menu
 
 def gamemodeSelected(app):
     resetGame(app)
